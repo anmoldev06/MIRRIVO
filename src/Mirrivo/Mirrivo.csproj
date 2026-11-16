@@ -10,6 +10,7 @@
     <Product>MIRRIVO</Product>
     <Description>Modern Android Screen Control &amp; Wireless Mirroring</Description>
     <Version>1.0.1</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
