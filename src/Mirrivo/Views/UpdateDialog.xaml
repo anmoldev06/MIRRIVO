@@ -1,0 +1,242 @@
+<Window x:Class="Mirrivo.Views.UpdateDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="MIRRIVO // Software Update"
+        Height="460" Width="480"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/GeistTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <!-- Outer Dialog Shell -->
+    <Border Background="{StaticResource BrushCanvas}"
+            BorderBrush="{StaticResource BrushHairline}"
+            BorderThickness="1"
+            CornerRadius="10"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Top Accent Rainbow Bar -->
+                <RowDefinition Height="3" />
+                <!-- Header -->
+                <RowDefinition Height="56" />
+                <!-- Content Area -->
+                <RowDefinition Height="*" />
+                <!-- Footer Action Buttons -->
+                <RowDefinition Height="64" />
+            </Grid.RowDefinitions>
+
+            <!-- 1. Top Rainbow Bar -->
+            <Border Grid.Row="0" Background="{StaticResource BrushVercelGradient}" />
+
+            <!-- 2. Header with Close Button -->
+            <Grid Grid.Row="1" Margin="20,0" MouseDown="Header_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="SYSTEM // OTA UPDATE"
+                               FontFamily="{StaticResource FontMono}"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrushMute}"
+                               Margin="0,0,0,2" />
+                    <TextBlock x:Name="TxtHeaderTitle"
+                               Text="Software Update"
+                               FontFamily="{StaticResource FontSans}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource BrushInk}" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="✕"
+                        Style="{StaticResource GeistIconButton}"
+                        Width="28" Height="28"
+                        Click="CloseButton_Click" />
+            </Grid>
+
+            <!-- 3. Main Content -->
+            <Grid Grid.Row="2" Margin="20,8,20,12">
+                <Grid.RowDefinitions>
+                    <!-- Version Info Badge Row -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Release Notes Title & Box -->
+                    <RowDefinition Height="*" />
+                    <!-- Download Progress Bar Section -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Version Comparison Badges -->
+                <Border Grid.Row="0"
+                        Background="#121212"
+                        BorderBrush="{StaticResource BrushHairline}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,10"
+                        Margin="0,0,0,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Current Version -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="CURRENT VERSION"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="9"
+                                       Foreground="{StaticResource BrushMute}"
+                                       Margin="0,0,0,2" />
+                            <TextBlock x:Name="TxtCurrentVersion"
+                                       Text="v1.0.1"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushInk}" />
+                        </StackPanel>
+
+                        <!-- Arrow -->
+                        <TextBlock Grid.Column="1"
+                                   Text="➔"
+                                   FontFamily="{StaticResource FontSans}"
+                                   FontSize="14"
+                                   Foreground="{StaticResource BrushMute}"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0" />
+
+                        <!-- Latest Version -->
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                            <TextBlock Text="LATEST AVAILABLE"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="9"
+                                       Foreground="{StaticResource BrushMute}"
+                                       Margin="0,0,0,2" />
+                            <TextBlock x:Name="TxtLatestVersion"
+                                       Text="v1.0.1"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       Foreground="#10B981" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Release Notes Box -->
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="RELEASE NOTES"
+                               FontFamily="{StaticResource FontMono}"
+                               FontSize="10"
+                               Foreground="{StaticResource BrushMute}"
+                               Margin="0,0,0,6" />
+
+                    <Border Grid.Row="1"
+                            Background="#111111"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <TextBlock x:Name="TxtReleaseNotes"
+                                       Text="Checking for updates..."
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="12"
+                                       Foreground="{StaticResource BrushInkSecondary}"
+                                       TextWrapping="Wrap"
+                                       LineHeight="18" />
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+
+                <!-- Download Progress Bar Section (Visible during download) -->
+                <StackPanel x:Name="PnlProgress"
+                            Grid.Row="2"
+                            Margin="0,12,0,0"
+                            Visibility="Collapsed">
+                    <Grid Margin="0,0,0,6">
+                        <TextBlock x:Name="TxtProgressStatus"
+                                   Text="Downloading update..."
+                                   FontFamily="{StaticResource FontMono}"
+                                   FontSize="11"
+                                   Foreground="{StaticResource BrushInkSecondary}" />
+                        <TextBlock x:Name="TxtProgressPercent"
+                                   Text="0%"
+                                   FontFamily="{StaticResource FontMono}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0070F3"
+                                   HorizontalAlignment="Right" />
+                    </Grid>
+
+                    <ProgressBar x:Name="PrgDownload"
+                                 Height="6"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="0"
+                                 Foreground="#0070F3"
+                                 Background="#1A1A1A"
+                                 BorderThickness="0" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 4. Footer Actions -->
+            <Border Grid.Row="3"
+                    Background="#0D0D0D"
+                    BorderBrush="{StaticResource BrushHairline}"
+                    BorderThickness="0,1,0,0"
+                    Padding="20,0">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Status indicator or size -->
+                    <TextBlock x:Name="TxtAssetSize"
+                               Text="Ready to update"
+                               FontFamily="{StaticResource FontMono}"
+                               FontSize="11"
+                               Foreground="{StaticResource BrushMute}"
+                               VerticalAlignment="Center" />
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button x:Name="BtnCancel"
+                                Content="Later"
+                                Style="{StaticResource GeistButtonPillSecondary}"
+                                Padding="16,8"
+                                Click="CancelButton_Click"
+                                Margin="0,0,10,0" />
+
+                        <Button x:Name="BtnAction"
+                                Content="Update Now"
+                                Style="{StaticResource GeistButtonPillPrimary}"
+                                Padding="20,8"
+                                Click="ActionButton_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

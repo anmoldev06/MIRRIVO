@@ -71,6 +71,20 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _alwaysOnTop = true;
 
+    // OTA In-App Update Properties
+    [ObservableProperty]
+    private bool _hasUpdate = false;
+
+    [ObservableProperty]
+    private string _latestVersion = "";
+
+    [ObservableProperty]
+    private UpdateInfo? _availableUpdate = null;
+
+    public string VersionBadgeText => HasUpdate ? $"★ v{LatestVersion} UPDATE" : $"v{UpdateService.CurrentVersionString}";
+    public string VersionBadgeBackground => HasUpdate ? "#10B981" : "#171717";
+    public string VersionBadgeForeground => HasUpdate ? "#000000" : "#A1A1A1";
+
     partial void OnAlwaysOnTopChanged(bool value)
     {
         Config.AlwaysOnTop = value;
@@ -179,6 +193,45 @@ public partial class MainViewModel : ObservableObject
         Config.AlwaysOnTop = true;
 
         _ = RefreshDevicesAsync();
+
+        // Background OTA Update Check (runs 3 seconds after launch)
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            try
+            {
+                var info = await UpdateService.Instance.CheckForUpdateAsync();
+                if (info.HasUpdate)
+                {
+                    Application.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        AvailableUpdate = info;
+                        HasUpdate = true;
+                        LatestVersion = info.LatestVersion;
+                        OnPropertyChanged(nameof(VersionBadgeText));
+                        OnPropertyChanged(nameof(VersionBadgeBackground));
+                        OnPropertyChanged(nameof(VersionBadgeForeground));
+                        Log($"OTA Update Available: v{info.LatestVersion}. Click the version pill to install.", LogLevel.Success);
+                    });
+                }
+            }
+            catch
+            {
+                // Silently ignore network failures in background check
+            }
+        });
+    }
+
+    private void Log(string message, LogLevel level = LogLevel.Info)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            Logs.Insert(0, new LogEntry { Timestamp = DateTime.Now, Level = level, Message = message });
+            if (Logs.Count > 150)
+            {
+                Logs.RemoveAt(Logs.Count - 1);
+            }
+        });
     }
 
     private void HandleLog(LogEntry entry)
@@ -552,6 +605,29 @@ public partial class MainViewModel : ObservableObject
     public void ClearLogs()
     {
         Logs.Clear();
+    }
+
+    [RelayCommand]
+    public async Task CheckForUpdatesAsync()
+    {
+        StatusText = "Checking for updates...";
+        Log("Querying GitHub for latest MIRRIVO release...", LogLevel.Info);
+
+        var info = await UpdateService.Instance.CheckForUpdateAsync();
+        AvailableUpdate = info;
+        HasUpdate = info.HasUpdate;
+        LatestVersion = info.LatestVersion;
+        OnPropertyChanged(nameof(VersionBadgeText));
+        OnPropertyChanged(nameof(VersionBadgeBackground));
+        OnPropertyChanged(nameof(VersionBadgeForeground));
+
+        StatusText = info.HasUpdate ? $"Update available: v{info.LatestVersion}" : "MIRRIVO is up to date";
+
+        var dialog = new UpdateDialog(info)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+        dialog.ShowDialog();
     }
 
     public async Task HandleDropFilesAsync(string[] files)

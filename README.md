@@ -33,6 +33,9 @@ Designed strictly in accordance with **Vercel's Geist Design System**: deep blac
 
 * **📦 Truly Single Portable Executable (`.exe`)**:
   * Self-contained single binary. No need to install .NET runtimes, Scrcpy, or ADB separately — everything is embedded and ready to run on any clean Windows machine.
+* **🔄 In-App OTA Auto-Updates**:
+  * One-click over-the-air updates directly from GitHub Releases.
+  * Automatically checks for new versions, downloads progress in real time, and seamlessly restarts into the latest binary without losing configuration.
 * **📶 Dual Connection Modes**:
   * **USB Cable Mode**: Instant plug-and-play auto-detection with real-time battery and hardware telemetry.
   * **One-Click Switch to Wireless Wi-Fi**: Start on cable, click *"Switch to Wi-Fi"*, and unplug the cable. MIRRIVO configures ADB TCP/IP and connects automatically.

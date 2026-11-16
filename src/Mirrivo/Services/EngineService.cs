@@ -85,14 +85,27 @@ public class EngineService
             // Fallback continues below
         }
 
-        // 5. Check WinGet package location as host fallback
-        string wingetScrcpyDir = @"C:\Users\Admin\AppData\Local\Microsoft\WinGet\Packages\Genymobile.scrcpy_Microsoft.Winget.Source_8wekyb3d8bbwe\scrcpy-win64-v5.0.1";
-        if (Directory.Exists(wingetScrcpyDir) && File.Exists(Path.Combine(wingetScrcpyDir, "scrcpy.exe")))
+        // 5. Check WinGet package location as host fallback dynamically
+        try
         {
-            EngineDirectory = wingetScrcpyDir;
-            AdbPath = Path.Combine(wingetScrcpyDir, "adb.exe");
-            ScrcpyPath = Path.Combine(wingetScrcpyDir, "scrcpy.exe");
-            return;
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string wingetPackagesDir = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
+            if (Directory.Exists(wingetPackagesDir))
+            {
+                var wingetScrcpyDir = Directory.GetDirectories(wingetPackagesDir, "*scrcpy*")
+                    .FirstOrDefault(d => File.Exists(Path.Combine(d, "scrcpy.exe")));
+                if (wingetScrcpyDir != null && File.Exists(Path.Combine(wingetScrcpyDir, "scrcpy.exe")))
+                {
+                    EngineDirectory = wingetScrcpyDir;
+                    AdbPath = Path.Combine(wingetScrcpyDir, "adb.exe");
+                    ScrcpyPath = Path.Combine(wingetScrcpyDir, "scrcpy.exe");
+                    return;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore search errors
         }
 
         // Fallback default

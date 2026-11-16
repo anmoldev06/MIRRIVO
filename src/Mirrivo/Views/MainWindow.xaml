@@ -66,9 +66,28 @@
                                Foreground="{StaticResource BrushInk}"
                                VerticalAlignment="Center"
                                Margin="0,0,10,0" />
-                    <Border Background="#171717" BorderBrush="#262626" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Margin="0,0,14,0">
-                        <TextBlock Text="v1.0.0" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" />
-                    </Border>
+                    <!-- Version & In-App OTA Update Pill Button -->
+                    <Button Command="{Binding CheckForUpdatesCommand}"
+                            ToolTip="Check for Updates (GitHub OTA)"
+                            Margin="0,0,14,0"
+                            VerticalAlignment="Center"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{Binding VersionBadgeBackground}"
+                                        BorderBrush="#333333"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="7,3">
+                                    <TextBlock Text="{Binding VersionBadgeText}"
+                                               FontFamily="{StaticResource FontMono}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{Binding VersionBadgeForeground}" />
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
                     <Border Background="#121212" BorderBrush="#262626" BorderThickness="1" CornerRadius="12" Padding="8,3" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="6" Height="6" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -97,6 +116,12 @@
                     <Button Content="Terminal"
                             Style="{StaticResource GeistButtonSquare}"
                             Command="{Binding ToggleConsoleCommand}"
+                            Margin="0,0,8,0" />
+
+                    <Button Content="★ Update"
+                            Style="{StaticResource GeistButtonSquare}"
+                            Command="{Binding CheckForUpdatesCommand}"
+                            ToolTip="Check for GitHub In-App Updates"
                             Margin="0,0,16,0" />
 
                     <!-- Window State Controls -->
@@ -257,7 +282,7 @@
                                            Foreground="{StaticResource BrushInk}"
                                            Margin="0,0,0,4" />
 
-                                <TextBlock Text="{Binding SelectedDevice.Serial, FallbackValue='RZCW20TP4QX'}"
+                                <TextBlock Text="{Binding SelectedDevice.Serial, FallbackValue='USB_DEVICE_01'}"
                                            FontFamily="{StaticResource FontMono}"
                                            FontSize="12"
                                            Foreground="{StaticResource BrushMute}" />
