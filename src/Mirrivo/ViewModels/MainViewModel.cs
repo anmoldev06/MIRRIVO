@@ -1,0 +1,582 @@
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows;
+using System.Windows.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Mirrivo.Models;
+using Mirrivo.Services;
+using Mirrivo.Views;
+
+namespace Mirrivo.ViewModels;
+
+public partial class MainViewModel : ObservableObject
+{
+    private readonly AdbService _adb = AdbService.Instance;
+    private readonly MirrorService _mirror = MirrorService.Instance;
+    private readonly DispatcherTimer _pollTimer;
+
+    [ObservableProperty]
+    private ObservableCollection<DeviceItem> _devices = new();
+
+    [ObservableProperty]
+    private DeviceItem? _selectedDevice;
+
+    [ObservableProperty]
+    private ObservableCollection<LogEntry> _logs = new();
+
+    [ObservableProperty]
+    private string _statusText = "Ready";
+
+    [ObservableProperty]
+    private bool _isBusy = false;
+
+    [ObservableProperty]
+    private bool _isConsoleExpanded = false;
+
+    [ObservableProperty]
+    private StreamConfig _config = new();
+
+    // Live Stream FPS
+    [ObservableProperty]
+    private double _currentStreamFps = 0.0;
+
+    public string FpsDisplay => CurrentStreamFps > 0 ? $"{CurrentStreamFps:F1} FPS" : "-- FPS";
+
+    // Live Reactive Toggles (Real-Time Hardware Effect)
+    [ObservableProperty]
+    private bool _showTouches = false;
+
+    partial void OnShowTouchesChanged(bool value)
+    {
+        Config.ShowTouches = value;
+        if (SelectedDevice != null)
+        {
+            _ = _adb.SetShowTouchesAsync(SelectedDevice.Serial, value);
+        }
+    }
+
+    [ObservableProperty]
+    private bool _showFps = false;
+
+    partial void OnShowFpsChanged(bool value)
+    {
+        Config.ShowFps = value;
+        if (SelectedDevice != null)
+        {
+            _ = _adb.SetShowFpsAsync(SelectedDevice.Serial, value);
+        }
+    }
+
+    [ObservableProperty]
+    private bool _alwaysOnTop = true;
+
+    partial void OnAlwaysOnTopChanged(bool value)
+    {
+        Config.AlwaysOnTop = value;
+        if (SelectedDevice != null)
+        {
+            _mirror.SetAlwaysOnTop(SelectedDevice.Serial, value);
+        }
+    }
+
+    [ObservableProperty]
+    private bool _neverTimeout = true;
+
+    partial void OnNeverTimeoutChanged(bool value)
+    {
+        Config.NeverTimeout = value;
+        if (SelectedDevice != null)
+        {
+            _ = _adb.SetScreenAwakeAsync(SelectedDevice.Serial, StayAwake, value);
+        }
+    }
+
+    [ObservableProperty]
+    private bool _stayAwake = true;
+
+    partial void OnStayAwakeChanged(bool value)
+    {
+        Config.StayAwake = value;
+        if (SelectedDevice != null)
+        {
+            _ = _adb.SetScreenAwakeAsync(SelectedDevice.Serial, value, NeverTimeout);
+        }
+    }
+
+    // Mirroring State & Button Bindings
+    public bool IsMirroringActive => SelectedDevice != null && _mirror.IsMirroring(SelectedDevice.Serial);
+    public string MirrorButtonText => IsMirroringActive ? "⏹ STOP MIRRORING" : "▶ START MIRRORING";
+    public string MirrorButtonBackground => IsMirroringActive ? "#DC2626" : "#FFFFFF"; // Red when active, White when stopped
+    public string MirrorButtonForeground => IsMirroringActive ? "#FFFFFF" : "#000000";
+
+    // Detailed Devices List for Status & Header
+    public string DetailedDevicesSummary => Devices.Count > 0 
+        ? string.Join("   ✦   ", Devices.Select(d => $"{d.Model} ({(d.IsWireless ? d.Serial + " [Wi-Fi]" : "USB Cable")})"))
+        : "No device connected";
+
+    // Stream Options for ComboBoxes
+    public List<string> ResolutionOptions { get; } = new() 
+    { 
+        "1080p (FHD - Recommended)", 
+        "720p (HD - Fastest Wi-Fi)", 
+        "Native Resolution" 
+    };
+    [ObservableProperty]
+    private string _selectedResolution = "1080p (FHD - Recommended)";
+
+    public List<string> BitrateOptions { get; } = new() 
+    { 
+        "6 Mbps (Ultra-Low Latency)", 
+        "8 Mbps (Fast Wi-Fi)", 
+        "16 Mbps (High Quality)", 
+        "24 Mbps (Ultra HD)" 
+    };
+    [ObservableProperty]
+    private string _selectedBitrate = "8 Mbps (Fast Wi-Fi)";
+
+    public List<string> FpsOptions { get; } = new() 
+    { 
+        "60 FPS (Smooth)", 
+        "120 FPS (High Refresh)", 
+        "30 FPS (Power Saver)" 
+    };
+    [ObservableProperty]
+    private string _selectedFps = "60 FPS (Smooth)";
+
+    public List<string> LatencyOptions { get; } = new()
+    {
+        "Ultra-Low Latency (Sub-30ms)",
+        "Balanced (Standard)",
+        "High Fidelity (USB Only)"
+    };
+    [ObservableProperty]
+    private string _selectedLatency = "Ultra-Low Latency (Sub-30ms)";
+
+    public MainViewModel()
+    {
+        _adb.OnLog += HandleLog;
+        _mirror.OnLog += HandleLog;
+        _mirror.OnMirrorStateChanged += HandleMirrorStateChanged;
+        _mirror.OnFpsUpdated += HandleFpsUpdated;
+
+        _pollTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(3)
+        };
+        _pollTimer.Tick += async (s, e) => await RefreshDevicesSilentAsync();
+        _pollTimer.Start();
+
+        Config.MaxSize = 1080;
+        Config.VideoBitrateMbps = 8;
+        Config.MaxFps = 60;
+        Config.LowLatencyWifiMode = true;
+        Config.StayAwake = true;
+        Config.NeverTimeout = true;
+        Config.TurnScreenOff = false;
+        Config.ShowTouches = false;
+        Config.ShowFps = false;
+        Config.AlwaysOnTop = true;
+
+        _ = RefreshDevicesAsync();
+    }
+
+    private void HandleLog(LogEntry entry)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            Logs.Insert(0, entry);
+            if (Logs.Count > 150)
+            {
+                Logs.RemoveAt(Logs.Count - 1);
+            }
+        });
+    }
+
+    private void HandleFpsUpdated(string serial, double fps)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            if (SelectedDevice?.Serial == serial || string.IsNullOrEmpty(serial))
+            {
+                CurrentStreamFps = fps;
+                OnPropertyChanged(nameof(FpsDisplay));
+            }
+        });
+    }
+
+    private void HandleMirrorStateChanged(string serial, bool isMirroring)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            var dev = Devices.FirstOrDefault(d => d.Serial == serial);
+            if (dev != null)
+            {
+                dev.Status = isMirroring ? DeviceConnectionStatus.Mirroring : DeviceConnectionStatus.Ready;
+            }
+            if (!isMirroring)
+            {
+                CurrentStreamFps = 0.0;
+                OnPropertyChanged(nameof(FpsDisplay));
+            }
+            NotifyMirrorButtonState();
+        });
+    }
+
+    private void NotifyMirrorButtonState()
+    {
+        OnPropertyChanged(nameof(Devices));
+        OnPropertyChanged(nameof(SelectedDevice));
+        OnPropertyChanged(nameof(DetailedDevicesSummary));
+        OnPropertyChanged(nameof(IsMirroringActive));
+        OnPropertyChanged(nameof(MirrorButtonText));
+        OnPropertyChanged(nameof(MirrorButtonBackground));
+        OnPropertyChanged(nameof(MirrorButtonForeground));
+    }
+
+    partial void OnSelectedDeviceChanged(DeviceItem? value)
+    {
+        NotifyMirrorButtonState();
+        if (value != null)
+        {
+            if (ShowTouches)
+            {
+                _ = _adb.SetShowTouchesAsync(value.Serial, true);
+            }
+            if (ShowFps)
+            {
+                _ = _adb.SetShowFpsAsync(value.Serial, true);
+            }
+            if (IsMirroringActive)
+            {
+                _mirror.SetAlwaysOnTop(value.Serial, AlwaysOnTop);
+            }
+        }
+    }
+
+    [RelayCommand]
+    public void SelectTargetDevice(DeviceItem? dev)
+    {
+        if (dev != null)
+        {
+            SelectedDevice = dev;
+        }
+    }
+
+    partial void OnSelectedResolutionChanged(string value)
+    {
+        Config.MaxSize = value switch
+        {
+            "720p (HD - Fastest Wi-Fi)" => 720,
+            "1080p (FHD - Recommended)" => 1080,
+            _ => 0
+        };
+    }
+
+    partial void OnSelectedBitrateChanged(string value)
+    {
+        Config.VideoBitrateMbps = value switch
+        {
+            "6 Mbps (Ultra-Low Latency)" => 6,
+            "8 Mbps (Fast Wi-Fi)" => 8,
+            "24 Mbps (Ultra HD)" => 24,
+            _ => 16
+        };
+    }
+
+    partial void OnSelectedFpsChanged(string value)
+    {
+        Config.MaxFps = value switch
+        {
+            "120 FPS (High Refresh)" => 120,
+            "30 FPS (Power Saver)" => 30,
+            _ => 60
+        };
+    }
+
+    partial void OnSelectedLatencyChanged(string value)
+    {
+        Config.LatencyPreset = value;
+        Config.LowLatencyWifiMode = value.StartsWith("Ultra-Low");
+    }
+
+    [RelayCommand]
+    public async Task RefreshDevicesAsync()
+    {
+        IsBusy = true;
+        StatusText = "Scanning devices...";
+        await RefreshDevicesSilentAsync();
+        IsBusy = false;
+        StatusText = Devices.Count > 0 ? $"{Devices.Count} device(s) connected" : "No device connected";
+    }
+
+    private async Task RefreshDevicesSilentAsync()
+    {
+        try
+        {
+            var list = await _adb.GetDevicesAsync();
+
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                var currentSelectedSerial = SelectedDevice?.Serial;
+                int oldBattery = SelectedDevice?.BatteryLevel ?? -1;
+
+                Devices.Clear();
+                foreach (var d in list)
+                {
+                    if (_mirror.IsMirroring(d.Serial))
+                    {
+                        d.Status = DeviceConnectionStatus.Mirroring;
+                    }
+                    if (d.Serial == currentSelectedSerial && oldBattery > 0)
+                    {
+                        d.BatteryLevel = oldBattery;
+                    }
+                    Devices.Add(d);
+                }
+
+                if (!string.IsNullOrEmpty(currentSelectedSerial))
+                {
+                    SelectedDevice = Devices.FirstOrDefault(d => d.Serial == currentSelectedSerial) ?? Devices.FirstOrDefault();
+                }
+                else
+                {
+                    SelectedDevice = Devices.FirstOrDefault();
+                }
+
+                NotifyMirrorButtonState();
+            });
+
+            if (SelectedDevice != null && SelectedDevice.Status == DeviceConnectionStatus.Ready)
+            {
+                int battery = await _adb.GetBatteryLevelAsync(SelectedDevice.Serial);
+                if (battery > 0)
+                {
+                    Application.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        if (SelectedDevice != null)
+                        {
+                            SelectedDevice.BatteryLevel = battery;
+                            OnPropertyChanged(nameof(SelectedDevice));
+                        }
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            HandleLog(new LogEntry { Message = $"Polling error: {ex.Message}", Level = LogLevel.Error });
+        }
+    }
+
+    [RelayCommand]
+    public async Task StartMirrorAsync(DeviceItem? device = null)
+    {
+        var target = device ?? SelectedDevice;
+        if (target == null)
+        {
+            MessageBox.Show("Please connect and select an Android device first.", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_mirror.IsMirroring(target.Serial))
+        {
+            _mirror.StopMirroring(target.Serial);
+            NotifyMirrorButtonState();
+            StatusText = "Mirroring stopped";
+            return;
+        }
+
+        if (target.Status == DeviceConnectionStatus.Unauthorized)
+        {
+            MessageBox.Show("Device is unauthorized. Please unlock phone and tap 'Allow USB debugging'.", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = $"Starting stream for {target.Model}...";
+        bool ok = await _mirror.StartMirroringAsync(target, Config);
+        IsBusy = false;
+        StatusText = ok ? "Mirroring active" : "Failed to start mirror";
+        NotifyMirrorButtonState();
+    }
+
+    [RelayCommand]
+    public void StopMirror(DeviceItem? device = null)
+    {
+        var target = device ?? SelectedDevice;
+        if (target != null)
+        {
+            _mirror.StopMirroring(target.Serial);
+            NotifyMirrorButtonState();
+            StatusText = "Stream stopped";
+        }
+    }
+
+    [RelayCommand]
+    public async Task SwitchModeAsync(DeviceItem? device = null)
+    {
+        var target = device ?? SelectedDevice;
+        if (target == null) return;
+
+        if (target.IsWireless)
+        {
+            IsBusy = true;
+            StatusText = "Switching device to USB mode...";
+            var (ok, msg) = await _adb.SwitchToUsbAsync(target.Serial);
+            IsBusy = false;
+            MessageBox.Show(msg, "MIRRIVO // USB Mode", MessageBoxButton.OK, MessageBoxImage.Information);
+            await RefreshDevicesAsync();
+        }
+        else
+        {
+            IsBusy = true;
+            StatusText = "Switching to Wireless Wi-Fi ADB...";
+            var (ok, msg) = await _adb.SwitchToWirelessAsync(target.Serial);
+            IsBusy = false;
+
+            if (ok)
+            {
+                MessageBox.Show(msg, "MIRRIVO // Wireless Ready", MessageBoxButton.OK, MessageBoxImage.Information);
+                await RefreshDevicesAsync();
+            }
+            else
+            {
+                MessageBox.Show(msg, "MIRRIVO // Wireless Switch Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+    }
+
+    [RelayCommand]
+    public async Task DisconnectOrResetAsync(DeviceItem? device = null)
+    {
+        var target = device ?? SelectedDevice;
+        if (target == null) return;
+
+        if (target.IsWireless)
+        {
+            await _adb.DisconnectAsync(target.Serial);
+            await RefreshDevicesAsync();
+        }
+        else
+        {
+            await _adb.ReconnectUsbAsync();
+            await RefreshDevicesAsync();
+            StatusText = "USB link refreshed";
+        }
+    }
+
+    [RelayCommand]
+    public void OpenWirelessDialog()
+    {
+        var dlg = new WirelessConnectDialog
+        {
+            Owner = Application.Current.MainWindow
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            _ = RefreshDevicesAsync();
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenUsbConnectAsync()
+    {
+        await _adb.ReconnectUsbAsync();
+        await RefreshDevicesAsync();
+
+        var usbDev = Devices.FirstOrDefault(d => !d.IsWireless);
+        if (usbDev != null)
+        {
+            SelectedDevice = usbDev;
+            MessageBox.Show($"USB device detected: {usbDev.Model} ({usbDev.Serial})\nReady for mirroring!", "MIRRIVO // USB Connected", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show("USB Connection Instructions:\n\n1. Connect phone to PC using a USB data cable.\n2. On your phone: Settings > Developer Options > enable 'USB Debugging'.\n3. Tap 'Allow / Always allow from this computer' on your phone.\n\nThen click Refresh!", "MIRRIVO // Connect via USB", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    [RelayCommand]
+    public async Task SendKeyAsync(string keyName)
+    {
+        if (SelectedDevice == null) return;
+
+        int code = keyName switch
+        {
+            "Home" => 3,
+            "Back" => 4,
+            "AppSwitch" => 187,
+            "Power" => 26,
+            "VolUp" => 24,
+            "VolDown" => 25,
+            _ => 0
+        };
+
+        if (code > 0)
+        {
+            await _adb.SendKeyEventAsync(SelectedDevice.Serial, code);
+        }
+    }
+
+    [RelayCommand]
+    public async Task TakeScreenshotAsync()
+    {
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Select a device first.", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        StatusText = "Capturing screenshot...";
+        var (ok, path) = await _adb.TakeScreenshotAsync(SelectedDevice.Serial);
+        if (ok)
+        {
+            StatusText = "Screenshot saved!";
+            MessageBox.Show($"Screenshot saved successfully:\n{path}", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            StatusText = "Screenshot failed";
+            MessageBox.Show($"Screenshot failed: {path}", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public void ToggleConsole()
+    {
+        IsConsoleExpanded = !IsConsoleExpanded;
+    }
+
+    [RelayCommand]
+    public void ClearLogs()
+    {
+        Logs.Clear();
+    }
+
+    public async Task HandleDropFilesAsync(string[] files)
+    {
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Please connect and select an active phone first.", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        foreach (var file in files)
+        {
+            if (Path.GetExtension(file).Equals(".apk", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusText = $"Installing {Path.GetFileName(file)}...";
+                var (ok, msg) = await _adb.InstallApkAsync(SelectedDevice.Serial, file);
+                MessageBox.Show(msg, "MIRRIVO APK Install", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+            }
+            else
+            {
+                StatusText = $"Pushing {Path.GetFileName(file)}...";
+                var (ok, msg) = await _adb.PushFileAsync(SelectedDevice.Serial, file);
+                MessageBox.Show(msg, "MIRRIVO File Transfer", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+            }
+        }
+        StatusText = "Ready";
+    }
+}

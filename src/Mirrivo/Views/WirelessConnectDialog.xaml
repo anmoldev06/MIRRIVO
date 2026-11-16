@@ -1,0 +1,147 @@
+<Window x:Class="Mirrivo.Views.WirelessConnectDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MIRRIVO // Wireless Connect"
+        Height="460" Width="490"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BrushCanvas}"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Icon="/Assets/logo.png"
+        BorderBrush="{StaticResource BrushHairlineLight}"
+        BorderThickness="1">
+
+    <Border Background="{StaticResource BrushCanvas}" CornerRadius="12" Padding="26">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header with Logo -->
+            <Grid Grid.Row="0" Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="38" Height="38" CornerRadius="8" Background="#000000" BorderBrush="#262626" BorderThickness="1" Margin="0,0,12,0">
+                        <Image Source="/Assets/logo.png" Stretch="Uniform" Margin="2" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="CONNECT // WIRELESS ADB"
+                                   FontFamily="{StaticResource FontMono}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushMute}"
+                                   Margin="0,0,0,2" />
+                        <TextBlock Text="Wireless Device Link"
+                                   FontFamily="{StaticResource FontSans}"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource BrushInk}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Close Button -->
+                <Button Grid.Column="1"
+                        Content="✕"
+                        Style="{StaticResource GeistIconButton}"
+                        Width="30" Height="30"
+                        VerticalAlignment="Top"
+                        Click="CloseButton_Click" />
+            </Grid>
+
+            <!-- Mode Selector (Direct IP vs Android 11+ Pairing) -->
+            <Border Grid.Row="1" Background="{StaticResource BrushCanvasElevated}"
+                    BorderBrush="{StaticResource BrushHairline}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="3"
+                    Margin="0,0,0,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="TabDirectBtn" Grid.Column="0" Content="Direct Connect (Port 5555)"
+                            Style="{StaticResource GeistButtonSquare}"
+                            Click="TabDirect_Click" />
+                    <Button x:Name="TabPairBtn" Grid.Column="1" Content="Pair with Code (Android 11+)"
+                            Style="{StaticResource GeistButtonSquare}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="TabPair_Click" />
+                </Grid>
+            </Border>
+
+            <!-- Form Inputs -->
+            <StackPanel Grid.Row="2" VerticalAlignment="Top">
+                <!-- IP Address Field -->
+                <TextBlock Text="IP ADDRESS"
+                           FontFamily="{StaticResource FontMono}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource BrushMute}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="TxtIpAddress"
+                         Style="{StaticResource GeistTextBox}"
+                         Text="192.168.1."
+                         Margin="0,0,0,14" />
+
+                <!-- Port Field -->
+                <TextBlock Text="PORT"
+                           FontFamily="{StaticResource FontMono}"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource BrushMute}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="TxtPort"
+                         Style="{StaticResource GeistTextBox}"
+                         Text="5555"
+                         Margin="0,0,0,14" />
+
+                <!-- Pairing Code Field (Visible only in pair mode) -->
+                <StackPanel x:Name="PairCodePanel" Visibility="Collapsed" Margin="0,0,0,14">
+                    <TextBlock Text="6-DIGIT PAIRING CODE"
+                               FontFamily="{StaticResource FontMono}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource BrushMute}"
+                               Margin="0,0,0,6" />
+                    <TextBox x:Name="TxtPairCode"
+                             Style="{StaticResource GeistTextBox}"
+                             MaxLength="6" />
+                </StackPanel>
+
+                <!-- Help Info Tip -->
+                <Border Background="#121212" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                    <TextBlock TextWrapping="Wrap"
+                               FontFamily="{StaticResource FontSans}"
+                               FontSize="12"
+                               Foreground="{StaticResource BrushBody}"
+                               LineHeight="18">
+                        <Run Text="Tip: " FontWeight="SemiBold" Foreground="#EDEDED" />
+                        <Run x:Name="TxtHelpTip" Text="Phone me Developer Options > Wireless Debugging ON karein. Dono PC aur Phone same Wi-Fi pe hone chahiye." />
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                <Button Content="Cancel"
+                        Style="{StaticResource GeistButtonSquare}"
+                        Margin="0,0,8,0"
+                        Click="CloseButton_Click" />
+                <Button x:Name="BtnConnect"
+                        Content="Connect Device"
+                        Style="{StaticResource GeistButtonPillPrimary}"
+                        Click="ConnectButton_Click" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
