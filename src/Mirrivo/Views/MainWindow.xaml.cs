@@ -93,7 +93,7 @@ public partial class MainWindow : Window
             DropZoneBorder.Background = _hoverDropBackground;
             DropZoneBorder.BorderBrush = _hoverDropBorder;
             DropZoneBorder.BorderThickness = new Thickness(1.5);
-            DropZoneText.Text = "Release to Install APK or Push File to Phone 🚀";
+            DropZoneText.Text = "Release to transfer file to phone 🚀";
             DropZoneText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0070F3"));
             DropZoneIcon.Text = "✨";
         }
@@ -102,8 +102,8 @@ public partial class MainWindow : Window
             DropZoneBorder.Background = _defaultDropBackground;
             DropZoneBorder.BorderBrush = _defaultDropBorder;
             DropZoneBorder.BorderThickness = new Thickness(1);
-            DropZoneText.Text = "Drag & drop any APK or file here to install/push to phone";
-            DropZoneText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A1A1A1"));
+            DropZoneText.Text = "Drag & drop files to share with phone";
+            DropZoneText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EDEDED"));
             DropZoneIcon.Text = "📥";
         }
     }

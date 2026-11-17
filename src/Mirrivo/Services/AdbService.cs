@@ -199,7 +199,7 @@ public class AdbService
         }
     }
 
-    public async Task SetScreenAwakeAsync(string serial, bool stayAwake, bool neverTimeout)
+    public async Task SetScreenAwakeAsync(string serial, bool stayAwake, bool neverTimeout = true)
     {
         try
         {
@@ -207,16 +207,41 @@ public class AdbService
             {
                 await RunAdbCommandAsync($"-s {serial} shell svc power stayon true", 2000);
                 await RunAdbCommandAsync($"-s {serial} shell settings put global stay_on_while_plugged_in 15", 2000);
-            }
-
-            if (neverTimeout)
-            {
                 await RunAdbCommandAsync($"-s {serial} shell settings put system screen_off_timeout 2147483647", 2000);
+                Log("Stay Awake activated (Screen will stay on and never sleep).", LogLevel.Success);
+            }
+            else
+            {
+                await RunAdbCommandAsync($"-s {serial} shell svc power stayon false", 2000);
+                await RunAdbCommandAsync($"-s {serial} shell settings put global stay_on_while_plugged_in 0", 2000);
+                await RunAdbCommandAsync($"-s {serial} shell settings put system screen_off_timeout 60000", 2000);
+                Log("Stay Awake deactivated (Restored normal 1-minute screen timeout).", LogLevel.Info);
             }
         }
         catch (Exception ex)
         {
             Log($"Failed to configure screen awake settings: {ex.Message}", LogLevel.Warning);
+        }
+    }
+
+    public async Task<bool> SetDisplayPowerAsync(string serial, bool turnOff)
+    {
+        try
+        {
+            string cmd = turnOff ? "cmd display power-off 0" : "cmd display power-reset 0";
+            var (code, _, err) = await RunAdbCommandAsync($"-s {serial} shell \"{cmd}\"", 3000);
+            if (code == 0)
+            {
+                Log(turnOff ? "Physical phone display turned OFF (saving battery while mirroring)" : "Physical phone display turned ON", LogLevel.Success);
+                return true;
+            }
+            Log($"Display power change warning: {err}", LogLevel.Warning);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Log($"Error toggling display power: {ex.Message}", LogLevel.Warning);
+            return false;
         }
     }
 
@@ -372,6 +397,103 @@ public class AdbService
         string err = !string.IsNullOrEmpty(error) ? error : output;
         Log($"Install failed: {err}", LogLevel.Error);
         return (false, err);
+    }
+
+    public static bool IsMediaFile(string filePath)
+    {
+        string ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".heic" or ".heif"
+                   or ".mp4" or ".mkv" or ".mov" or ".avi" or ".webm" or ".flv" or ".3gp" or ".wmv" or ".m4v";
+    }
+
+    public async Task<(bool Success, string Message, string Destination)> SmartPushFileAsync(
+        string serial,
+        string filePath,
+        IProgress<(double Percent, long TransferredBytes, long TotalBytes, string Speed)>? progress = null,
+        CancellationToken ct = default)
+    {
+        if (!File.Exists(filePath))
+            return (false, "File does not exist.", "");
+
+        string fileName = Path.GetFileName(filePath);
+        long fileTotalBytes = new FileInfo(filePath).Length;
+        bool isMedia = IsMediaFile(filePath);
+
+        // Videos/Images -> /sdcard/DCIM/Mirrivo Shared/
+        // APKs & all other files -> /sdcard/Download/
+        string targetDir = isMedia ? "/sdcard/DCIM/Mirrivo Shared/" : "/sdcard/Download/";
+        string targetRemotePath = targetDir + fileName;
+        string destLabel = isMedia ? "DCIM/Mirrivo Shared" : "Downloads";
+
+        Log($"Sharing '{fileName}' to {destLabel}...", LogLevel.Command);
+
+        // Ensure remote directory exists on phone
+        await RunAdbCommandAsync($"-s {serial} shell \"mkdir -p '{targetDir}'\"", 3000);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = _engine.AdbPath,
+            Arguments = $"-s {serial} push \"{filePath}\" \"{targetDir}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        using var process = new Process { StartInfo = psi };
+        process.Start();
+
+        // Monitor remote file size via stat -c %s to calculate real-time progress
+        using var monitorCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var monitorTask = Task.Run(async () =>
+        {
+            var sw = Stopwatch.StartNew();
+            while (!process.HasExited && !monitorCts.Token.IsCancellationRequested)
+            {
+                await Task.Delay(150, monitorCts.Token);
+                try
+                {
+                    var (code, outStr, _) = await RunAdbCommandAsync($"-s {serial} shell \"stat -c %s '{targetRemotePath}'\"", 1000);
+                    if (code == 0 && long.TryParse(outStr.Trim(), out long currentBytes))
+                    {
+                        double percent = fileTotalBytes > 0 ? Math.Min(99.0, (double)currentBytes / fileTotalBytes * 100.0) : 0;
+                        double elapsedSec = sw.Elapsed.TotalSeconds;
+                        double speedMb = elapsedSec > 0 ? (currentBytes / (1024.0 * 1024.0)) / elapsedSec : 0;
+                        progress?.Report((percent, currentBytes, fileTotalBytes, $"{speedMb:F1} MB/s"));
+                    }
+                }
+                catch
+                {
+                    // Ignore transient polling exceptions
+                }
+            }
+        }, monitorCts.Token);
+
+        string output = await process.StandardOutput.ReadToEndAsync(ct);
+        string error = await process.StandardError.ReadToEndAsync(ct);
+        await process.WaitForExitAsync(ct);
+
+        monitorCts.Cancel();
+        try { await monitorTask; } catch { }
+
+        if (process.ExitCode == 0)
+        {
+            progress?.Report((100.0, fileTotalBytes, fileTotalBytes, "Completed"));
+
+            // Broadcast media scanner so images/videos appear immediately in Gallery
+            if (isMedia)
+            {
+                await RunAdbCommandAsync($"-s {serial} shell \"am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d 'file://{targetRemotePath}'\"", 3000);
+            }
+
+            string msg = $"Transferred {fileName} to {destLabel} successfully!";
+            Log(msg, LogLevel.Success);
+            return (true, msg, destLabel);
+        }
+
+        string err = !string.IsNullOrEmpty(error) ? error : output;
+        Log($"Transfer failed: {err}", LogLevel.Error);
+        return (false, err, destLabel);
     }
 
     public async Task<(bool Success, string Message)> PushFileAsync(string serial, string filePath, string targetDir = "/sdcard/Download/")

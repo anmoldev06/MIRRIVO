@@ -432,25 +432,96 @@
                     </Grid>
                 </Border>
 
-                <!-- Drag & Drop Dropzone Box (With Animated Glowing Response) -->
+                <!-- Drag & Drop Dropzone Box (With Animated Glowing Response & Live Upload Progress) -->
                 <Border x:Name="DropZoneBorder"
                         Grid.Row="3"
                         Background="{StaticResource BrushCanvasElevated}"
                         BorderBrush="{StaticResource BrushHairline}"
                         BorderThickness="1"
                         CornerRadius="8"
-                        Padding="14"
+                        Padding="14,10"
                         Margin="0,14,0,0"
                         AllowDrop="True">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock x:Name="DropZoneIcon" Text="📥" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <TextBlock x:Name="DropZoneText"
-                                   Text="Drag &amp; drop any APK or file here to install/push to phone"
-                                   FontFamily="{StaticResource FontSans}"
-                                   FontSize="12"
-                                   Foreground="{StaticResource BrushBody}"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
+                    <Grid>
+                        <!-- Normal Idle Dropzone State -->
+                        <Grid Visibility="{Binding IsUploading, Converter={StaticResource InverseBoolToVis}}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock x:Name="DropZoneIcon" Text="📥" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="DropZoneText"
+                                               Text="Drag &amp; drop files to share with phone"
+                                               FontFamily="{StaticResource FontSans}"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Images &amp; Videos ➔ DCIM/Mirrivo Shared  •  APKs &amp; Files ➔ Downloads"
+                                               FontFamily="{StaticResource FontMono}"
+                                               FontSize="10"
+                                               Foreground="{StaticResource BrushMute}"
+                                               Margin="0,2,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Live Uploading Progress State -->
+                        <Grid Visibility="{Binding IsUploading, Converter={StaticResource BoolToVis}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="⚡" FontSize="13" Foreground="#0070F3" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding UploadFileName}"
+                                               FontFamily="{StaticResource FontSans}"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushInk}"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxWidth="220"
+                                               VerticalAlignment="Center" />
+                                    <Border Background="#141414"
+                                            BorderBrush="{StaticResource BrushHairline}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="6,1"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding UploadDestination}"
+                                                   FontFamily="{StaticResource FontMono}"
+                                                   FontSize="9"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#10B981" />
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Status / Progress Details -->
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding UploadStatusDetails}"
+                                           FontFamily="{StaticResource FontMono}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushBlue}"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+
+                            <!-- Animated Gradient Progress Bar -->
+                            <ProgressBar Grid.Row="1"
+                                         Height="6"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="{Binding UploadProgressPercent}"
+                                         Foreground="{StaticResource BrushBlue}"
+                                         Background="#171717"
+                                         BorderThickness="0" />
+                        </Grid>
+                    </Grid>
                 </Border>
             </Grid>
 
@@ -578,12 +649,8 @@
                                           IsChecked="{Binding AlwaysOnTop}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
-                                <!-- Never Sleep / Never Timeout -->
-                                <CheckBox Content="Never Sleep / Never Timeout (Keep screen awake)"
-                                          IsChecked="{Binding NeverTimeout}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <CheckBox Content="Stay Awake (Keep device powered on)"
+                                <!-- Stay Awake / Never Sleep (Unified) -->
+                                <CheckBox Content="Stay Awake / Never Sleep (Keep screen awake)"
                                           IsChecked="{Binding StayAwake}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
@@ -591,8 +658,8 @@
                                           IsChecked="{Binding Config.LowLatencyWifiMode}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
-                                <CheckBox Content="Turn phone display off while mirroring"
-                                          IsChecked="{Binding Config.TurnScreenOff}"
+                                <CheckBox Content="Turn phone display off while mirroring (Live)"
+                                          IsChecked="{Binding TurnScreenOff}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
                                 <CheckBox Content="Forward audio to PC speakers"

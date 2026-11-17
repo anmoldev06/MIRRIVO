@@ -95,18 +95,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private bool _neverTimeout = true;
-
-    partial void OnNeverTimeoutChanged(bool value)
-    {
-        Config.NeverTimeout = value;
-        if (SelectedDevice != null)
-        {
-            _ = _adb.SetScreenAwakeAsync(SelectedDevice.Serial, StayAwake, value);
-        }
-    }
-
-    [ObservableProperty]
     private bool _stayAwake = true;
 
     partial void OnStayAwakeChanged(bool value)
@@ -114,9 +102,43 @@ public partial class MainViewModel : ObservableObject
         Config.StayAwake = value;
         if (SelectedDevice != null)
         {
-            _ = _adb.SetScreenAwakeAsync(SelectedDevice.Serial, value, NeverTimeout);
+            _ = _adb.SetScreenAwakeAsync(SelectedDevice.Serial, value);
         }
     }
+
+    [ObservableProperty]
+    private bool _turnScreenOff = false;
+
+    partial void OnTurnScreenOffChanged(bool value)
+    {
+        Config.TurnScreenOff = value;
+        if (SelectedDevice != null)
+        {
+            _ = _adb.SetDisplayPowerAsync(SelectedDevice.Serial, value);
+        }
+    }
+
+    // Upload & File Sharing Live Progress State
+    [ObservableProperty]
+    private bool _isUploading = false;
+
+    [ObservableProperty]
+    private string _uploadFileName = "";
+
+    [ObservableProperty]
+    private string _uploadDestination = "";
+
+    [ObservableProperty]
+    private double _uploadProgressPercent = 0.0;
+
+    [ObservableProperty]
+    private string _uploadStatusDetails = "";
+
+    [ObservableProperty]
+    private bool _isUploadCompleted = false;
+
+    [ObservableProperty]
+    private string _uploadSuccessMessage = "";
 
     // Mirroring State & Button Bindings
     public bool IsMirroringActive => SelectedDevice != null && _mirror.IsMirroring(SelectedDevice.Serial);
@@ -271,6 +293,13 @@ public partial class MainViewModel : ObservableObject
             {
                 CurrentStreamFps = 0.0;
                 OnPropertyChanged(nameof(FpsDisplay));
+                // Automatically ensure phone display is ON when mirroring stops
+                _ = _adb.SetDisplayPowerAsync(serial, false);
+            }
+            else if (TurnScreenOff)
+            {
+                // Ensure display is turned OFF if user has TurnScreenOff enabled
+                _ = _adb.SetDisplayPowerAsync(serial, true);
             }
             NotifyMirrorButtonState();
         });
@@ -638,21 +667,55 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (files == null || files.Length == 0) return;
+
+        IsUploading = true;
+        IsUploadCompleted = false;
+
         foreach (var file in files)
         {
-            if (Path.GetExtension(file).Equals(".apk", StringComparison.OrdinalIgnoreCase))
+            UploadFileName = Path.GetFileName(file);
+            UploadProgressPercent = 0;
+            UploadStatusDetails = "Starting transfer...";
+            bool isMedia = AdbService.IsMediaFile(file);
+            UploadDestination = isMedia ? "DCIM/Mirrivo Shared" : "Downloads";
+
+            var progress = new Progress<(double Percent, long TransferredBytes, long TotalBytes, string Speed)>(p =>
             {
-                StatusText = $"Installing {Path.GetFileName(file)}...";
-                var (ok, msg) = await _adb.InstallApkAsync(SelectedDevice.Serial, file);
-                MessageBox.Show(msg, "MIRRIVO APK Install", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+                UploadProgressPercent = p.Percent;
+                double curMb = p.TransferredBytes / (1024.0 * 1024.0);
+                double totalMb = p.TotalBytes / (1024.0 * 1024.0);
+                UploadStatusDetails = $"{p.Percent:F0}% ({curMb:F1} MB / {totalMb:F1} MB) • {p.Speed}";
+                StatusText = $"Sharing {UploadFileName} ➔ {UploadDestination}: {p.Percent:F0}%";
+            });
+
+            var (ok, msg, dest) = await _adb.SmartPushFileAsync(SelectedDevice.Serial, file, progress);
+            if (ok)
+            {
+                UploadSuccessMessage = $"✓ Saved to {dest}";
+                Log($"Shared '{UploadFileName}' successfully to {dest}", LogLevel.Success);
             }
             else
             {
-                StatusText = $"Pushing {Path.GetFileName(file)}...";
-                var (ok, msg) = await _adb.PushFileAsync(SelectedDevice.Serial, file);
-                MessageBox.Show(msg, "MIRRIVO File Transfer", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+                UploadSuccessMessage = $"✕ Failed: {msg}";
+                Log($"Failed to share '{UploadFileName}': {msg}", LogLevel.Error);
             }
         }
-        StatusText = "Ready";
+
+        IsUploadCompleted = true;
+        StatusText = UploadSuccessMessage;
+
+        // Auto-dismiss upload state after 4 seconds
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(4000);
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                IsUploading = false;
+                IsUploadCompleted = false;
+                UploadProgressPercent = 0;
+                StatusText = "Ready";
+            });
+        });
     }
 }

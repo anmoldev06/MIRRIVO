@@ -13,7 +13,7 @@ namespace Mirrivo.Services;
 public class UpdateInfo
 {
     public bool HasUpdate { get; set; }
-    public string CurrentVersion { get; set; } = "1.0.1";
+    public string CurrentVersion { get; set; } = "1.0.2";
     public string LatestVersion { get; set; } = string.Empty;
     public string ReleaseTitle { get; set; } = string.Empty;
     public string ReleaseNotes { get; set; } = string.Empty;
@@ -27,8 +27,8 @@ public class UpdateService
     private static readonly Lazy<UpdateService> _instance = new(() => new UpdateService());
     public static UpdateService Instance => _instance.Value;
 
-    public const string CurrentVersionString = "1.0.1";
-    public static readonly Version CurrentVersion = new(1, 0, 1);
+    public const string CurrentVersionString = "1.0.2";
+    public static readonly Version CurrentVersion = new(1, 0, 2);
     public const string GitHubRepo = "anmoldev06/MIRRIVO";
 
     private readonly HttpClient _httpClient;
