@@ -224,27 +224,6 @@ public class AdbService
         }
     }
 
-    public async Task<bool> SetDisplayPowerAsync(string serial, bool turnOff)
-    {
-        try
-        {
-            string cmd = turnOff ? "cmd display power-off 0" : "cmd display power-reset 0";
-            var (code, _, err) = await RunAdbCommandAsync($"-s {serial} shell \"{cmd}\"", 3000);
-            if (code == 0)
-            {
-                Log(turnOff ? "Physical phone display turned OFF (saving battery while mirroring)" : "Physical phone display turned ON", LogLevel.Success);
-                return true;
-            }
-            Log($"Display power change warning: {err}", LogLevel.Warning);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Log($"Error toggling display power: {ex.Message}", LogLevel.Warning);
-            return false;
-        }
-    }
-
     public async Task RestoreScreenAwakeAsync(string serial)
     {
         try
@@ -469,12 +448,36 @@ public class AdbService
             }
         }, monitorCts.Token);
 
-        string output = await process.StandardOutput.ReadToEndAsync(ct);
-        string error = await process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
+        using var reg = ct.Register(() =>
+        {
+            try { process.Kill(); } catch { }
+        });
+
+        string output = "";
+        string error = "";
+        try
+        {
+            output = await process.StandardOutput.ReadToEndAsync(ct);
+            error = await process.StandardError.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(); } catch { }
+            monitorCts.Cancel();
+            await RunAdbCommandAsync($"-s {serial} shell \"rm -f '{targetRemotePath}'\"", 2000);
+            Log($"Upload of '{fileName}' cancelled by user.", LogLevel.Warning);
+            return (false, "Transfer cancelled.", destLabel);
+        }
 
         monitorCts.Cancel();
         try { await monitorTask; } catch { }
+
+        if (ct.IsCancellationRequested)
+        {
+            await RunAdbCommandAsync($"-s {serial} shell \"rm -f '{targetRemotePath}'\"", 2000);
+            return (false, "Transfer cancelled.", destLabel);
+        }
 
         if (process.ExitCode == 0)
         {

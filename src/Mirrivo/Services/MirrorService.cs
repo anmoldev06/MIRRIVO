@@ -122,13 +122,8 @@ public class MirrorService
             return false;
         }
 
-        // Apply Android-level settings (Awake, Touches, FPS)
+        // Apply Android-level settings (Awake)
         await AdbService.Instance.SetScreenAwakeAsync(device.Serial, config.StayAwake, config.NeverTimeout);
-        await AdbService.Instance.SetShowTouchesAsync(device.Serial, config.ShowTouches);
-        if (config.ShowFps)
-        {
-            await AdbService.Instance.SetShowFpsAsync(device.Serial, true);
-        }
 
         var argsList = new List<string>
         {
@@ -181,11 +176,6 @@ public class MirrorService
         if (!config.ForwardAudio)
         {
             argsList.Add("--no-audio");
-        }
-
-        if (config.ShowTouches)
-        {
-            argsList.Add("--show-touches");
         }
 
         // Note: We don't pass --always-on-top CLI flag to Scrcpy directly,

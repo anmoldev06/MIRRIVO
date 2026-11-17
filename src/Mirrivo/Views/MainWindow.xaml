@@ -10,7 +10,7 @@
         Foreground="{StaticResource BrushInk}"
         WindowStyle="None"
         AllowsTransparency="True"
-        Icon="/Assets/logo.png"
+        Icon="/Assets/app_icon.png"
         BorderBrush="{StaticResource BrushHairline}"
         BorderThickness="1"
         AllowDrop="True"
@@ -57,7 +57,7 @@
                 <!-- Brand Logo (Image 3) & Eyebrow -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="34" Height="34" CornerRadius="8" Background="#000000" BorderBrush="#333333" BorderThickness="1" Margin="0,0,12,0" ClipToBounds="True">
-                        <Image Source="/Assets/logo.png" Stretch="Uniform" />
+                        <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="2" />
                     </Border>
                     <TextBlock Text="MIRRIVO"
                                FontFamily="{StaticResource FontSans}"
@@ -340,7 +340,7 @@
                             <Grid VerticalAlignment="Center">
                                 <StackPanel HorizontalAlignment="Center">
                                     <Border Width="56" Height="56" CornerRadius="12" Background="#000000" BorderBrush="#262626" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,10" ClipToBounds="True">
-                                        <Image Source="/Assets/logo.png" Stretch="Uniform" />
+                                        <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="4" />
                                     </Border>
                                     <TextBlock Text="Sub-30ms Ultra Low-Latency Stream Ready"
                                                FontFamily="{StaticResource FontSans}"
@@ -402,7 +402,7 @@
                     <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
                         <StackPanel HorizontalAlignment="Center">
                             <Border Width="64" Height="64" CornerRadius="14" Background="#000000" BorderBrush="#262626" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,16" ClipToBounds="True">
-                                <Image Source="/Assets/logo.png" Stretch="Uniform" />
+                                <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="4" />
                             </Border>
                             <TextBlock Text="No Android Device Detected"
                                        FontFamily="{StaticResource FontSans}"
@@ -474,6 +474,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -484,7 +485,7 @@
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushInk}"
                                                TextTrimming="CharacterEllipsis"
-                                               MaxWidth="220"
+                                               MaxWidth="180"
                                                VerticalAlignment="Center" />
                                     <Border Background="#141414"
                                             BorderBrush="{StaticResource BrushHairline}"
@@ -508,7 +509,18 @@
                                            FontSize="11"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushBlue}"
-                                           VerticalAlignment="Center" />
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,10,0" />
+
+                                <!-- Cancel Upload Button -->
+                                <Button Grid.Column="2"
+                                        Content="✕ Cancel"
+                                        Style="{StaticResource GeistButtonSquare}"
+                                        Height="22"
+                                        FontSize="10"
+                                        Padding="8,2"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding CancelUploadCommand}" />
                             </Grid>
 
                             <!-- Animated Gradient Progress Bar -->
@@ -639,35 +651,27 @@
                                            Foreground="{StaticResource BrushMute}"
                                            Margin="0,0,0,10" />
 
-                                <!-- Show Real-Time FPS / Refresh Rate -->
-                                <CheckBox Content="Show Real-Time FPS / Refresh Rate (On screen)"
-                                          IsChecked="{Binding ShowFps}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
                                 <!-- Keep Mirror Window Always On Top (Real-Time Live Win32) -->
                                 <CheckBox Content="Keep mirror window always on top"
                                           IsChecked="{Binding AlwaysOnTop}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
-                                <!-- Stay Awake / Never Sleep (Unified) -->
-                                <CheckBox Content="Stay Awake / Never Sleep (Keep screen awake)"
+                                <!-- Stay Awake (Single Unified Option) -->
+                                <CheckBox Content="Stay Awake (Keep screen awake &amp; prevent sleep)"
                                           IsChecked="{Binding StayAwake}"
+                                          Style="{StaticResource GeistToggleSwitch}" />
+
+                                <!-- Turn phone display off while mirroring -->
+                                <CheckBox Content="Turn phone display off while mirroring"
+                                          IsChecked="{Binding TurnScreenOff}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
                                 <CheckBox Content="Ultra-Low Latency Wi-Fi Mode (Zero buffering)"
                                           IsChecked="{Binding Config.LowLatencyWifiMode}"
                                           Style="{StaticResource GeistToggleSwitch}" />
 
-                                <CheckBox Content="Turn phone display off while mirroring (Live)"
-                                          IsChecked="{Binding TurnScreenOff}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
                                 <CheckBox Content="Forward audio to PC speakers"
                                           IsChecked="{Binding Config.ForwardAudio}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <CheckBox Content="Show physical screen touches"
-                                          IsChecked="{Binding ShowTouches}"
                                           Style="{StaticResource GeistToggleSwitch}" />
                             </StackPanel>
                         </Border>

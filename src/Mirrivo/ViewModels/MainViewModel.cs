@@ -37,36 +37,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private StreamConfig _config = new();
 
-    // Live Stream FPS
+    // Live Stream FPS (Permanently active without any on/off toggle)
     [ObservableProperty]
     private double _currentStreamFps = 0.0;
 
     public string FpsDisplay => CurrentStreamFps > 0 ? $"{CurrentStreamFps:F1} FPS" : "-- FPS";
-
-    // Live Reactive Toggles (Real-Time Hardware Effect)
-    [ObservableProperty]
-    private bool _showTouches = false;
-
-    partial void OnShowTouchesChanged(bool value)
-    {
-        Config.ShowTouches = value;
-        if (SelectedDevice != null)
-        {
-            _ = _adb.SetShowTouchesAsync(SelectedDevice.Serial, value);
-        }
-    }
-
-    [ObservableProperty]
-    private bool _showFps = false;
-
-    partial void OnShowFpsChanged(bool value)
-    {
-        Config.ShowFps = value;
-        if (SelectedDevice != null)
-        {
-            _ = _adb.SetShowFpsAsync(SelectedDevice.Serial, value);
-        }
-    }
 
     [ObservableProperty]
     private bool _alwaysOnTop = true;
@@ -112,9 +87,18 @@ public partial class MainViewModel : ObservableObject
     partial void OnTurnScreenOffChanged(bool value)
     {
         Config.TurnScreenOff = value;
-        if (SelectedDevice != null)
+        if (SelectedDevice != null && IsMirroringActive)
         {
-            _ = _adb.SetDisplayPowerAsync(SelectedDevice.Serial, value);
+            _ = Task.Run(async () =>
+            {
+                Log(value ? "Applying screen off mode to device stream..." : "Restoring phone display...", LogLevel.Info);
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    _mirror.StopMirroring(SelectedDevice.Serial);
+                    await Task.Delay(250);
+                    await _mirror.StartMirroringAsync(SelectedDevice, Config);
+                });
+            });
         }
     }
 
@@ -139,6 +123,19 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _uploadSuccessMessage = "";
+
+    private CancellationTokenSource? _uploadCts;
+
+    [RelayCommand]
+    public void CancelUpload()
+    {
+        if (_uploadCts != null && !_uploadCts.IsCancellationRequested)
+        {
+            _uploadCts.Cancel();
+            UploadStatusDetails = "Cancelling transfer...";
+            Log("File upload cancelled by user.", LogLevel.Warning);
+        }
+    }
 
     // Mirroring State & Button Bindings
     public bool IsMirroringActive => SelectedDevice != null && _mirror.IsMirroring(SelectedDevice.Serial);
@@ -210,8 +207,6 @@ public partial class MainViewModel : ObservableObject
         Config.StayAwake = true;
         Config.NeverTimeout = true;
         Config.TurnScreenOff = false;
-        Config.ShowTouches = false;
-        Config.ShowFps = false;
         Config.AlwaysOnTop = true;
 
         _ = RefreshDevicesAsync();
@@ -293,13 +288,6 @@ public partial class MainViewModel : ObservableObject
             {
                 CurrentStreamFps = 0.0;
                 OnPropertyChanged(nameof(FpsDisplay));
-                // Automatically ensure phone display is ON when mirroring stops
-                _ = _adb.SetDisplayPowerAsync(serial, false);
-            }
-            else if (TurnScreenOff)
-            {
-                // Ensure display is turned OFF if user has TurnScreenOff enabled
-                _ = _adb.SetDisplayPowerAsync(serial, true);
             }
             NotifyMirrorButtonState();
         });
@@ -319,20 +307,9 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedDeviceChanged(DeviceItem? value)
     {
         NotifyMirrorButtonState();
-        if (value != null)
+        if (value != null && IsMirroringActive)
         {
-            if (ShowTouches)
-            {
-                _ = _adb.SetShowTouchesAsync(value.Serial, true);
-            }
-            if (ShowFps)
-            {
-                _ = _adb.SetShowFpsAsync(value.Serial, true);
-            }
-            if (IsMirroringActive)
-            {
-                _mirror.SetAlwaysOnTop(value.Serial, AlwaysOnTop);
-            }
+            _mirror.SetAlwaysOnTop(value.Serial, AlwaysOnTop);
         }
     }
 
@@ -669,53 +646,69 @@ public partial class MainViewModel : ObservableObject
 
         if (files == null || files.Length == 0) return;
 
+        _uploadCts = new CancellationTokenSource();
         IsUploading = true;
         IsUploadCompleted = false;
 
-        foreach (var file in files)
+        try
         {
-            UploadFileName = Path.GetFileName(file);
-            UploadProgressPercent = 0;
-            UploadStatusDetails = "Starting transfer...";
-            bool isMedia = AdbService.IsMediaFile(file);
-            UploadDestination = isMedia ? "DCIM/Mirrivo Shared" : "Downloads";
+            foreach (var file in files)
+            {
+                if (_uploadCts.Token.IsCancellationRequested) break;
 
-            var progress = new Progress<(double Percent, long TransferredBytes, long TotalBytes, string Speed)>(p =>
-            {
-                UploadProgressPercent = p.Percent;
-                double curMb = p.TransferredBytes / (1024.0 * 1024.0);
-                double totalMb = p.TotalBytes / (1024.0 * 1024.0);
-                UploadStatusDetails = $"{p.Percent:F0}% ({curMb:F1} MB / {totalMb:F1} MB) • {p.Speed}";
-                StatusText = $"Sharing {UploadFileName} ➔ {UploadDestination}: {p.Percent:F0}%";
-            });
+                UploadFileName = Path.GetFileName(file);
+                UploadProgressPercent = 0;
+                UploadStatusDetails = "Starting transfer...";
+                bool isMedia = AdbService.IsMediaFile(file);
+                UploadDestination = isMedia ? "DCIM/Mirrivo Shared" : "Downloads";
 
-            var (ok, msg, dest) = await _adb.SmartPushFileAsync(SelectedDevice.Serial, file, progress);
-            if (ok)
-            {
-                UploadSuccessMessage = $"✓ Saved to {dest}";
-                Log($"Shared '{UploadFileName}' successfully to {dest}", LogLevel.Success);
-            }
-            else
-            {
-                UploadSuccessMessage = $"✕ Failed: {msg}";
-                Log($"Failed to share '{UploadFileName}': {msg}", LogLevel.Error);
+                var progress = new Progress<(double Percent, long TransferredBytes, long TotalBytes, string Speed)>(p =>
+                {
+                    UploadProgressPercent = p.Percent;
+                    double curMb = p.TransferredBytes / (1024.0 * 1024.0);
+                    double totalMb = p.TotalBytes / (1024.0 * 1024.0);
+                    UploadStatusDetails = $"{p.Percent:F0}% ({curMb:F1} MB / {totalMb:F1} MB) • {p.Speed}";
+                    StatusText = $"Sharing {UploadFileName} ➔ {UploadDestination}: {p.Percent:F0}%";
+                });
+
+                var (ok, msg, dest) = await _adb.SmartPushFileAsync(SelectedDevice.Serial, file, progress, _uploadCts.Token);
+                if (ok)
+                {
+                    UploadSuccessMessage = $"✓ Saved to {dest}";
+                    Log($"Shared '{UploadFileName}' successfully to {dest}", LogLevel.Success);
+                }
+                else
+                {
+                    UploadSuccessMessage = _uploadCts.Token.IsCancellationRequested ? "✕ Upload cancelled" : $"✕ Failed: {msg}";
+                    Log(_uploadCts.Token.IsCancellationRequested ? "File transfer cancelled." : $"Failed to share '{UploadFileName}': {msg}", LogLevel.Warning);
+                    if (_uploadCts.Token.IsCancellationRequested) break;
+                }
             }
         }
-
-        IsUploadCompleted = true;
-        StatusText = UploadSuccessMessage;
-
-        // Auto-dismiss upload state after 4 seconds
-        _ = Task.Run(async () =>
+        catch (OperationCanceledException)
         {
-            await Task.Delay(4000);
-            Application.Current?.Dispatcher?.Invoke(() =>
+            UploadSuccessMessage = "✕ Upload cancelled";
+            Log("File transfer cancelled by user.", LogLevel.Warning);
+        }
+        finally
+        {
+            IsUploadCompleted = true;
+            StatusText = UploadSuccessMessage;
+            _uploadCts?.Dispose();
+            _uploadCts = null;
+
+            // Auto-dismiss upload state after 3 seconds
+            _ = Task.Run(async () =>
             {
-                IsUploading = false;
-                IsUploadCompleted = false;
-                UploadProgressPercent = 0;
-                StatusText = "Ready";
+                await Task.Delay(3000);
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    IsUploading = false;
+                    IsUploadCompleted = false;
+                    UploadProgressPercent = 0;
+                    StatusText = "Ready";
+                });
             });
-        });
+        }
     }
 }
