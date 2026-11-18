@@ -23,6 +23,26 @@ public class MirrorService
     #region Win32 Window Positioning & Topmost API
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+        public int Width => Right - Left;
+        public int Height => Bottom - Top;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
@@ -47,6 +67,38 @@ public class MirrorService
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TOPMOST = 0x00000008;
     #endregion
+
+    public IntPtr GetMirrorWindowHandle(string serial)
+    {
+        try
+        {
+            if (_activeSessions.TryGetValue(serial, out var proc) && !proc.HasExited)
+            {
+                proc.Refresh();
+                if (proc.MainWindowHandle != IntPtr.Zero && IsWindowVisible(proc.MainWindowHandle))
+                {
+                    return proc.MainWindowHandle;
+                }
+
+                uint targetPid = (uint)proc.Id;
+                IntPtr found = IntPtr.Zero;
+                EnumWindows((hWnd, lParam) =>
+                {
+                    GetWindowThreadProcessId(hWnd, out uint pid);
+                    if (pid == targetPid && IsWindowVisible(hWnd))
+                    {
+                        found = hWnd;
+                        return false;
+                    }
+                    return true;
+                }, IntPtr.Zero);
+
+                return found;
+            }
+        }
+        catch { }
+        return IntPtr.Zero;
+    }
 
     private void Log(string message, LogLevel level = LogLevel.Info)
     {

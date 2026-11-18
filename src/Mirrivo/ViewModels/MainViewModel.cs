@@ -358,6 +358,17 @@ public partial class MainViewModel : ObservableObject
                 {
                     _ = StopRecordingAsync();
                 }
+                if (_floatingBar != null && _floatingBar.IsLoaded)
+                {
+                    _floatingBar.Close();
+                    _floatingBar = null;
+                    IsFloatingBarActive = false;
+                }
+            }
+            else
+            {
+                // Auto-open docked vertical companion bar attached to phone mirror window
+                OpenFloatingBar();
             }
             NotifyMirrorButtonState();
         });
@@ -858,17 +869,9 @@ public partial class MainViewModel : ObservableObject
         TurnScreenOff = !TurnScreenOff;
     }
 
-    [RelayCommand]
-    public void ToggleFloatingBar()
+    public void OpenFloatingBar()
     {
-        if (_floatingBar != null && _floatingBar.IsLoaded)
-        {
-            _floatingBar.Close();
-            _floatingBar = null;
-            IsFloatingBarActive = false;
-            Log("Floating Quick Control Bar closed.", LogLevel.Info);
-        }
-        else
+        if (_floatingBar == null || !_floatingBar.IsLoaded)
         {
             _floatingBar = new FloatingMiniBar
             {
@@ -882,7 +885,23 @@ public partial class MainViewModel : ObservableObject
             };
             _floatingBar.Show();
             IsFloatingBarActive = true;
-            Log("Floating Quick Control Bar opened on screen.", LogLevel.Success);
+            Log("Attached Quick Control Bar docked to phone mirror.", LogLevel.Success);
+        }
+    }
+
+    [RelayCommand]
+    public void ToggleFloatingBar()
+    {
+        if (_floatingBar != null && _floatingBar.IsLoaded)
+        {
+            _floatingBar.Close();
+            _floatingBar = null;
+            IsFloatingBarActive = false;
+            Log("Quick Control Bar closed.", LogLevel.Info);
+        }
+        else
+        {
+            OpenFloatingBar();
         }
     }
 
