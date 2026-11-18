@@ -15,6 +15,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly AdbService _adb = AdbService.Instance;
     private readonly MirrorService _mirror = MirrorService.Instance;
+    private readonly PhoneStorageService _storage = PhoneStorageService.Instance;
     private readonly DispatcherTimer _pollTimer;
 
     [ObservableProperty]
@@ -209,6 +210,16 @@ public partial class MainViewModel : ObservableObject
     public string MirrorButtonBackground => IsMirroringActive ? "#DC2626" : "#FFFFFF"; // Red when active, White when stopped
     public string MirrorButtonForeground => IsMirroringActive ? "#FFFFFF" : "#000000";
 
+    // Phone Storage File Explorer Mounting
+    public bool IsPhoneStorageMounted => _storage.IsMounted;
+    public string PhoneStorageDriveLetterDisplay => _storage.MountedDriveLetter.HasValue ? $"{_storage.MountedDriveLetter.Value}:" : "";
+    public string PhoneStorageButtonText => _storage.IsMounted
+        ? $"📁 Phone ({_storage.MountedDriveLetter}:)"
+        : "📁 Phone Files";
+    public string PhoneStorageStatusText => _storage.IsMounted
+        ? $"Mounted on {_storage.MountedDriveLetter}: in File Explorer"
+        : "Mount phone storage wirelessly in File Explorer";
+
     // Detailed Devices List for Status & Header
     public string DetailedDevicesSummary => Devices.Count > 0 
         ? string.Join("   ✦   ", Devices.Select(d => $"{d.Model} ({(d.IsWireless ? d.Serial + " [Wi-Fi]" : "USB Cable")})"))
@@ -258,6 +269,16 @@ public partial class MainViewModel : ObservableObject
         _mirror.OnLog += HandleLog;
         _mirror.OnMirrorStateChanged += HandleMirrorStateChanged;
         _mirror.OnFpsUpdated += HandleFpsUpdated;
+        _storage.OnMountStateChanged += (mounted) =>
+        {
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                OnPropertyChanged(nameof(IsPhoneStorageMounted));
+                OnPropertyChanged(nameof(PhoneStorageButtonText));
+                OnPropertyChanged(nameof(PhoneStorageDriveLetterDisplay));
+                OnPropertyChanged(nameof(PhoneStorageStatusText));
+            });
+        };
 
         _pollTimer = new DispatcherTimer
         {
@@ -903,6 +924,38 @@ public partial class MainViewModel : ObservableObject
         {
             OpenFloatingBar();
         }
+    }
+
+    [RelayCommand]
+    public async Task TogglePhoneStorageAsync()
+    {
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Please connect and select an Android device first.", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_storage.IsMounted)
+        {
+            _storage.OpenInExplorer();
+        }
+        else
+        {
+            IsBusy = true;
+            StatusText = $"Mounting {SelectedDevice.Model} in Windows File Explorer...";
+            bool ok = await _storage.MountDriveAsync(SelectedDevice.Serial, SelectedDevice.Model);
+            IsBusy = false;
+            StatusText = ok
+                ? $"Mounted phone storage on {_storage.MountedDriveLetter}: in File Explorer"
+                : "Failed to mount phone storage. Ensure device is connected.";
+        }
+    }
+
+    [RelayCommand]
+    public void UnmountPhoneStorage()
+    {
+        _storage.UnmountDrive();
+        StatusText = "Phone storage unmounted from Windows";
     }
 
     [RelayCommand]

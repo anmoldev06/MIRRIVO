@@ -118,10 +118,10 @@
                             Command="{Binding ToggleConsoleCommand}"
                             Margin="0,0,8,0" />
 
-                    <Button Content="🪟 Quick Bar"
+                    <Button Content="{Binding PhoneStorageButtonText}"
                             Style="{StaticResource GeistButtonSquare}"
-                            Command="{Binding ToggleFloatingBarCommand}"
-                            ToolTip="Open Draggable Floating Control Bar"
+                            Command="{Binding TogglePhoneStorageCommand}"
+                            ToolTip="Mount phone storage as a Windows drive in File Explorer"
                             Margin="0,0,8,0" />
 
                     <Button Content="★ Update"
@@ -396,9 +396,6 @@
                                                HorizontalAlignment="Center"
                                                Margin="0,0,0,8" />
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <Border Background="#0C2038" BorderBrush="#0070F3" BorderThickness="1" CornerRadius="6" Padding="10,3" Margin="0,0,6,0">
-                                            <TextBlock Text="{Binding FpsDisplay}" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushBlue}" />
-                                        </Border>
                                         <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="10,3" Margin="0,0,6,0">
                                             <TextBlock Text="{Binding SelectedResolution}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushBody}" />
                                         </Border>
@@ -665,10 +662,10 @@
                                             ToolTip="Toggle phone display on/off while mirroring"
                                             Command="{Binding TogglePhoneDisplayCommand}" />
 
-                                    <!-- Floating Bar Overlay -->
-                                    <Button Content="🪟 Mini Bar" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            ToolTip="Open Draggable Floating Control Bar"
-                                            Command="{Binding ToggleFloatingBarCommand}" />
+                                    <!-- Phone File Explorer Drive -->
+                                    <Button Content="{Binding PhoneStorageButtonText}" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
+                                            ToolTip="Mount phone storage as a Windows drive in File Explorer"
+                                            Command="{Binding TogglePhoneStorageCommand}" />
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
