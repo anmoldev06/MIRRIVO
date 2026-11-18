@@ -34,6 +34,15 @@ public partial class MainViewModel : ObservableObject
     private bool _isBusy = false;
 
     [ObservableProperty]
+    private string _activeTab = "Mirror"; // "Mirror", "Settings", "Wireless", "Console"
+
+    [RelayCommand]
+    public void SetActiveTab(string tab)
+    {
+        ActiveTab = tab;
+    }
+
+    [ObservableProperty]
     private bool _isConsoleExpanded = false;
 
     [ObservableProperty]
@@ -643,6 +652,93 @@ public partial class MainViewModel : ObservableObject
             await _adb.ReconnectUsbAsync();
             await RefreshDevicesAsync();
             StatusText = "USB link refreshed";
+        }
+    }
+
+    // ==============================================
+    // WIRELESS INLINE PAIRING STATE & COMMANDS
+    // ==============================================
+    [ObservableProperty]
+    private string _wirelessIp = "192.168.1.";
+
+    [ObservableProperty]
+    private string _wirelessPort = "5555";
+
+    [ObservableProperty]
+    private string _wirelessPairCode = "";
+
+    [ObservableProperty]
+    private bool _isWirelessPairingMode = false;
+
+    [ObservableProperty]
+    private bool _isConnectingWireless = false;
+
+    [ObservableProperty]
+    private string _wirelessStatusMessage = "";
+
+    [RelayCommand]
+    public void SetWirelessMode(string mode)
+    {
+        IsWirelessPairingMode = mode.Equals("Pair", StringComparison.OrdinalIgnoreCase);
+        WirelessStatusMessage = "";
+        if (!IsWirelessPairingMode && (string.IsNullOrWhiteSpace(WirelessPort) || WirelessPort == ""))
+        {
+            WirelessPort = "5555";
+        }
+    }
+
+    [RelayCommand]
+    public async Task ConnectWirelessDirectAsync()
+    {
+        string ip = WirelessIp.Trim();
+        if (string.IsNullOrWhiteSpace(ip) || !int.TryParse(WirelessPort.Trim(), out int port))
+        {
+            WirelessStatusMessage = "Please enter a valid IP address and Port.";
+            return;
+        }
+
+        IsConnectingWireless = true;
+        WirelessStatusMessage = $"Connecting to {ip}:{port}...";
+        try
+        {
+            if (IsWirelessPairingMode)
+            {
+                string code = WirelessPairCode.Trim();
+                if (string.IsNullOrWhiteSpace(code) || code.Length < 6)
+                {
+                    WirelessStatusMessage = "Please enter 6-digit pairing code.";
+                    return;
+                }
+                var (pairOk, pairMsg) = await _adb.PairWirelessAsync(ip, port, code);
+                if (!pairOk)
+                {
+                    WirelessStatusMessage = $"Pairing failed: {pairMsg}";
+                    return;
+                }
+                // Once paired, connect
+                await _adb.ConnectWirelessAsync(ip, 5555);
+            }
+            else
+            {
+                var (connOk, connMsg) = await _adb.ConnectWirelessAsync(ip, port);
+                if (!connOk)
+                {
+                    WirelessStatusMessage = $"Connection failed: {connMsg}";
+                    return;
+                }
+            }
+
+            WirelessStatusMessage = "✓ Connected successfully!";
+            await RefreshDevicesAsync();
+            ActiveTab = "Mirror";
+        }
+        catch (Exception ex)
+        {
+            WirelessStatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsConnectingWireless = false;
         }
     }
 

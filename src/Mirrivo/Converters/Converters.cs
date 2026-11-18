@@ -90,3 +90,42 @@ public class HexToBrushConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+public class StringEqualsToVisibilityConverter : IValueConverter
+{
+    public bool Invert { get; set; } = false;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        string valStr = value?.ToString() ?? "";
+        string paramStr = parameter?.ToString() ?? "";
+        bool matches = string.Equals(valStr, paramStr, StringComparison.OrdinalIgnoreCase);
+        if (Invert) matches = !matches;
+        return matches ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class StringEqualsToBrushConverter : IValueConverter
+{
+    public Brush ActiveBrush { get; set; } = Brushes.White;
+    public Brush InactiveBrush { get; set; } = Brushes.Transparent;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        string valStr = value?.ToString() ?? "";
+        string paramStr = parameter?.ToString() ?? "";
+        return string.Equals(valStr, paramStr, StringComparison.OrdinalIgnoreCase) 
+            ? ActiveBrush 
+            : InactiveBrush;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

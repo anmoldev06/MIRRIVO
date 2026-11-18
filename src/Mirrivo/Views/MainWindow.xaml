@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Mirrivo.ViewModels"
         Title="MIRRIVO — Android Screen Control &amp; Wireless Mirroring"
-        Height="740" Width="1100"
-        MinHeight="640" MinWidth="960"
+        Height="720" Width="1020"
+        MinHeight="620" MinWidth="860"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BrushCanvas}"
         Foreground="{StaticResource BrushInk}"
@@ -23,62 +23,153 @@
         <vm:MainViewModel />
     </Window.DataContext>
 
-    <Grid>
+    <Grid Background="{StaticResource BrushCanvas}">
         <Grid.RowDefinitions>
-            <!-- Top Gradient Accent Line -->
-            <RowDefinition Height="3" />
-            <!-- App Bar / Navigation -->
-            <RowDefinition Height="64" />
-            <!-- Main Content Area -->
+            <!-- 1. Apple Navigation & Title Bar -->
+            <RowDefinition Height="56" />
+            <!-- 2. Main Content Body (Dynamic Tabs) -->
             <RowDefinition Height="*" />
-            <!-- Bottom Drawer (Logs Console) -->
-            <RowDefinition Height="Auto" />
-            <!-- Footer Status Bar -->
-            <RowDefinition Height="34" />
+            <!-- 3. Minimalist Footer -->
+            <RowDefinition Height="32" />
         </Grid.RowDefinitions>
 
-        <!-- 1. Vercel Signature Rainbow Mesh Gradient Accent Bar -->
-        <Border Grid.Row="0" Background="{StaticResource BrushVercelGradient}" />
-
-        <!-- 2. Header & Top Navigation Bar -->
-        <Border Grid.Row="1"
+        <!-- ==============================================
+             1. HEADER: APPLE UNIFIED NAV & TITLE BAR
+             ============================================== -->
+        <Border Grid.Row="0"
                 Background="{StaticResource BrushCanvas}"
                 BorderBrush="{StaticResource BrushHairline}"
                 BorderThickness="0,0,0,1"
-                Padding="24,0"
+                Padding="20,0"
                 MouseDown="TitleBar_MouseDown">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <!-- Left: Brand & Status -->
                     <ColumnDefinition Width="Auto" />
+                    <!-- Center: Segmented Navigation Pill -->
                     <ColumnDefinition Width="*" />
+                    <!-- Right: Device Pill & Window Controls -->
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Brand Logo (Image 3) & Eyebrow -->
+                <!-- Left: MIRRIVO Brand & Glowing Indicator -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="34" Height="34" CornerRadius="8" Background="#000000" BorderBrush="#333333" BorderThickness="1" Margin="0,0,12,0" ClipToBounds="True">
+                    <Border Width="28" Height="28" CornerRadius="7" Background="#161617" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" Margin="0,0,10,0" ClipToBounds="True">
                         <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="2" />
                     </Border>
                     <TextBlock Text="MIRRIVO"
                                FontFamily="{StaticResource FontSans}"
-                               FontSize="18"
+                               FontSize="15"
                                FontWeight="Bold"
                                Foreground="{StaticResource BrushInk}"
                                VerticalAlignment="Center"
                                Margin="0,0,10,0" />
-                    <!-- Version & In-App OTA Update Pill Button -->
+                    <Border Background="#121214" BorderBrush="#26262A" BorderThickness="1" CornerRadius="10" Padding="7,2" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6" Height="6" Fill="{StaticResource BrushSuccess}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                            <TextBlock Text="READY" FontFamily="{StaticResource FontMono}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushSuccess}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Center: Apple Segmented Navigation Bar -->
+                <Border Grid.Column="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="#161617"
+                        BorderBrush="{StaticResource BrushHairline}"
+                        BorderThickness="1"
+                        CornerRadius="17"
+                        Padding="3">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- Tab 1: Mirror -->
+                        <Button Style="{StaticResource AppleSegmentTab}"
+                                Command="{Binding SetActiveTabCommand}"
+                                CommandParameter="Mirror"
+                                Background="{Binding ActiveTab, Converter={StaticResource NavTabActiveBackground}, ConverterParameter=Mirror}"
+                                Foreground="{Binding ActiveTab, Converter={StaticResource NavTabActiveForeground}, ConverterParameter=Mirror}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📱" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Mirror" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Tab 2: Settings -->
+                        <Button Style="{StaticResource AppleSegmentTab}"
+                                Command="{Binding SetActiveTabCommand}"
+                                CommandParameter="Settings"
+                                Background="{Binding ActiveTab, Converter={StaticResource NavTabActiveBackground}, ConverterParameter=Settings}"
+                                Foreground="{Binding ActiveTab, Converter={StaticResource NavTabActiveForeground}, ConverterParameter=Settings}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⚙️" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Settings" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Tab 3: Wireless -->
+                        <Button Style="{StaticResource AppleSegmentTab}"
+                                Command="{Binding SetActiveTabCommand}"
+                                CommandParameter="Wireless"
+                                Background="{Binding ActiveTab, Converter={StaticResource NavTabActiveBackground}, ConverterParameter=Wireless}"
+                                Foreground="{Binding ActiveTab, Converter={StaticResource NavTabActiveForeground}, ConverterParameter=Wireless}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📡" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Wireless" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Tab 4: Console -->
+                        <Button Style="{StaticResource AppleSegmentTab}"
+                                Command="{Binding SetActiveTabCommand}"
+                                CommandParameter="Console"
+                                Background="{Binding ActiveTab, Converter={StaticResource NavTabActiveBackground}, ConverterParameter=Console}"
+                                Foreground="{Binding ActiveTab, Converter={StaticResource NavTabActiveForeground}, ConverterParameter=Console}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="💻" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Console" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Right: Device Live Capsule & Window Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Connected Device Capsule -->
+                    <Border Background="#161617"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10,4"
+                            Margin="0,0,8,0"
+                            Visibility="{Binding SelectedDevice, Converter={StaticResource NullToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6" Height="6" Fill="{Binding SelectedDevice.StatusColor, Converter={StaticResource HexToBrush}}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding SelectedDevice.Model}" FontFamily="{StaticResource FontSans}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushInk}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding SelectedDevice.BatteryDisplay}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Refresh Devices Button -->
+                    <Button Content="⟳"
+                            ToolTip="Scan for devices"
+                            Style="{StaticResource GeistIconButton}"
+                            Width="30" Height="30"
+                            Command="{Binding RefreshDevicesCommand}"
+                            Margin="0,0,6,0" />
+
+                    <!-- In-App OTA Update Button -->
                     <Button Command="{Binding CheckForUpdatesCommand}"
-                            ToolTip="Check for Updates (GitHub OTA)"
-                            Margin="0,0,14,0"
+                            ToolTip="Check for Updates"
+                            Margin="0,0,12,0"
                             VerticalAlignment="Center"
                             Cursor="Hand">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border Background="{Binding VersionBadgeBackground}"
-                                        BorderBrush="#333333"
+                                        BorderBrush="{StaticResource BrushHairline}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="7,3">
+                                        CornerRadius="10"
+                                        Padding="8,3">
                                     <TextBlock Text="{Binding VersionBadgeText}"
                                                FontFamily="{StaticResource FontMono}"
                                                FontSize="10"
@@ -88,96 +179,41 @@
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
-                    <Border Background="#121212" BorderBrush="#262626" BorderThickness="1" CornerRadius="12" Padding="8,3" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center" />
-                            <TextBlock Text="ENGINE READY" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="SemiBold" Foreground="#10B981" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
 
-                <!-- Center Controls: USB & Wireless Connect Options -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="⚡ USB Connect"
-                            Style="{StaticResource GeistButtonPillSecondary}"
-                            Command="{Binding OpenUsbConnectCommand}"
-                            Margin="0,0,8,0" />
-
-                    <Button Content="＋ Wireless Link"
-                            Style="{StaticResource GeistButtonPillSecondary}"
-                            Command="{Binding OpenWirelessDialogCommand}"
-                            Margin="0,0,8,0" />
-
-                    <Button Content="⟳ Refresh"
-                            Style="{StaticResource GeistButtonSquare}"
-                            Command="{Binding RefreshDevicesCommand}"
-                            Margin="0,0,8,0" />
-
-                    <Button Content="Terminal"
-                            Style="{StaticResource GeistButtonSquare}"
-                            Command="{Binding ToggleConsoleCommand}"
-                            Margin="0,0,8,0" />
-
-                    <Button Content="{Binding PhoneStorageButtonText}"
-                            Style="{StaticResource GeistButtonSquare}"
-                            Command="{Binding TogglePhoneStorageCommand}"
-                            ToolTip="Mount phone storage as a Windows drive in File Explorer"
-                            Margin="0,0,8,0" />
-
-                    <Button Content="★ Update"
-                            Style="{StaticResource GeistButtonSquare}"
-                            Command="{Binding CheckForUpdatesCommand}"
-                            ToolTip="Check for GitHub In-App Updates"
-                            Margin="0,0,16,0" />
-
-                    <!-- Window State Controls -->
-                    <Button Content="—" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MinimizeButton_Click" ToolTip="Minimize" Margin="0,0,4,0" />
-                    <Button Content="□" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MaximizeButton_Click" ToolTip="Maximize / Restore" Margin="0,0,4,0" />
+                    <!-- Window Control Buttons -->
+                    <Button Content="—" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MinimizeButton_Click" ToolTip="Minimize" Margin="0,0,2,0" />
+                    <Button Content="□" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MaximizeButton_Click" ToolTip="Maximize / Restore" Margin="0,0,2,0" />
                     <Button Content="✕" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="CloseButton_Click" ToolTip="Close" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- 3. Main Body (2 Columns Layout) -->
-        <Grid Grid.Row="2" Margin="24,18">
-            <Grid.ColumnDefinitions>
-                <!-- Left: Device Canvas & Stream Host -->
-                <ColumnDefinition Width="3*" MinWidth="440" />
-                <!-- Gap -->
-                <ColumnDefinition Width="20" />
-                <!-- Right: Stream Tuning & Hardware Remote -->
-                <ColumnDefinition Width="2*" MinWidth="340" />
-            </Grid.ColumnDefinitions>
+        <!-- ==============================================
+             2. MAIN CONTENT BODY (TAB BASED)
+             ============================================== -->
+        <Grid Grid.Row="1" Margin="24,18">
 
             <!-- ==============================================
-                 LEFT COLUMN: CONNECTED DEVICES & HERO LAUNCHER
+                 TAB 1: MIRROR (THE HERO INTERFACE)
                  ============================================== -->
-            <Grid Grid.Column="0">
+            <Grid Visibility="{Binding ActiveTab, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Mirror}">
                 <Grid.RowDefinitions>
+                    <!-- Optional Multi-Device Strip -->
                     <RowDefinition Height="Auto" />
-                    <!-- Connected Targets Selector Strip -->
-                    <RowDefinition Height="Auto" />
+                    <!-- Main Hero Stage -->
                     <RowDefinition Height="*" />
+                    <!-- File Sharing Drop Zone -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Section Eyebrow -->
-                <TextBlock Grid.Row="0"
-                           Text="DEVICE MANAGER // ACTIVE TARGET"
-                           FontFamily="{StaticResource FontMono}"
-                           FontSize="11"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource BrushMute}"
-                           Margin="0,0,0,6" />
-
-                <!-- Multi-Device Selector Bar (Shows only when 2+ devices are connected) -->
-                <Border Grid.Row="1"
-                        Background="#0D0D0D"
+                <!-- Multi-Device Selection Bar (Visible only when 2+ devices are connected) -->
+                <Border Grid.Row="0"
+                        Background="#121214"
                         BorderBrush="{StaticResource BrushHairline}"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="6,4"
-                        Margin="0,0,0,12"
+                        CornerRadius="12"
+                        Padding="8,4"
+                        Margin="0,0,0,14"
                         Visibility="{Binding Devices.Count, Converter={StaticResource MultiCountToVis}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -185,13 +221,13 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" Text="TARGETS:"
+                        <TextBlock Grid.Column="0" Text="SELECT PHONE:"
                                    FontFamily="{StaticResource FontMono}"
                                    FontSize="10"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource BrushMute}"
                                    VerticalAlignment="Center"
-                                   Margin="6,0,10,0" />
+                                   Margin="8,0,12,0" />
 
                         <ItemsControl Grid.Column="1" ItemsSource="{Binding Devices}">
                             <ItemsControl.ItemsPanel>
@@ -204,31 +240,14 @@
                                     <Button Command="{Binding DataContext.SelectTargetDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             Margin="0,0,6,0"
-                                            Padding="10,4"
+                                            Padding="12,5"
                                             Cursor="Hand"
-                                            Background="#141414"
-                                            BorderBrush="{StaticResource BrushHairline}"
-                                            BorderThickness="1">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource GeistButtonSquare}">
-                                                <Setter Property="Height" Value="28" />
-                                                <Setter Property="FontSize" Value="11" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Value="True">
-                                                        <DataTrigger.Binding>
-                                                            <MultiBinding Converter="{x:Null}">
-                                                                <!-- Helper fallback -->
-                                                            </MultiBinding>
-                                                        </DataTrigger.Binding>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
+                                            Style="{StaticResource AppleSegmentTab}">
                                         <StackPanel Orientation="Horizontal">
                                             <Ellipse Width="6" Height="6" Fill="{Binding StatusColor}" VerticalAlignment="Center" Margin="0,0,6,0" />
                                             <TextBlock Text="{Binding Model}" FontWeight="SemiBold" VerticalAlignment="Center" />
                                             <TextBlock Text=" · " Foreground="{StaticResource BrushMute}" VerticalAlignment="Center" />
-                                            <TextBlock Text="{Binding ConnectionTypeDisplay}" Foreground="{StaticResource BrushBody}" FontSize="10" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding ConnectionTypeDisplay}" Foreground="{StaticResource BrushMute}" FontSize="10" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                 </DataTemplate>
@@ -237,32 +256,35 @@
                     </Grid>
                 </Border>
 
-                <!-- Active Device Card (When Connected) -->
-                <Border Grid.Row="2"
+                <!-- Hero Section: When Device IS Connected -->
+                <Border Grid.Row="1"
                         Background="{StaticResource BrushCanvasElevated}"
                         BorderBrush="{StaticResource BrushHairline}"
                         BorderThickness="1"
-                        CornerRadius="12"
-                        Padding="24"
+                        CornerRadius="18"
+                        Padding="28"
                         Visibility="{Binding SelectedDevice, Converter={StaticResource NullToVis}}">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <!-- Card Header -->
                             <RowDefinition Height="Auto" />
+                            <!-- Stage & Visual State -->
                             <RowDefinition Height="*" />
+                            <!-- Hero CTA & Essential Action Capsules -->
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <!-- Device Card Header -->
+                        <!-- Hero Header: Device Specs & Live FPS/Battery -->
                         <Grid Grid.Row="0" Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
+                            <!-- Left: Device Title & Badges -->
                             <StackPanel Grid.Column="0">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                    <!-- Dynamic Live Status Pill -->
-                                    <Border Background="#171717" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,8,0">
+                                    <Border Background="#1E1E22" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <Ellipse Width="6" Height="6" Fill="{Binding SelectedDevice.StatusColor, Converter={StaticResource HexToBrush}}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="{Binding SelectedDevice.StatusText, FallbackValue=READY}"
@@ -272,8 +294,7 @@
                                                        Foreground="{Binding SelectedDevice.StatusColor, Converter={StaticResource HexToBrush}}" />
                                         </StackPanel>
                                     </Border>
-                                    <!-- Connection Type Badge -->
-                                    <Border Background="#171717" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="10" Padding="8,3">
+                                    <Border Background="#1E1E22" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="10" Padding="8,3">
                                         <TextBlock Text="{Binding SelectedDevice.ConnectionTypeDisplay, FallbackValue='USB Cable'}"
                                                    FontFamily="{StaticResource FontMono}"
                                                    FontSize="10"
@@ -281,34 +302,34 @@
                                     </Border>
                                 </StackPanel>
 
-                                <!-- Device Name Heading -->
-                                <TextBlock Text="{Binding SelectedDevice.Model, FallbackValue='Galaxy Device'}"
+                                <TextBlock Text="{Binding SelectedDevice.Model, FallbackValue='Android Device'}"
                                            FontFamily="{StaticResource FontSans}"
-                                           FontSize="24"
+                                           FontSize="26"
                                            FontWeight="Bold"
                                            Foreground="{StaticResource BrushInk}"
-                                           Margin="0,0,0,4" />
+                                           Margin="0,0,0,3" />
 
-                                <TextBlock Text="{Binding SelectedDevice.Serial, FallbackValue='USB_DEVICE_01'}"
+                                <TextBlock Text="{Binding SelectedDevice.Serial, FallbackValue='192.168.1.8:5555'}"
                                            FontFamily="{StaticResource FontMono}"
                                            FontSize="12"
                                            Foreground="{StaticResource BrushMute}" />
                             </StackPanel>
 
-                            <!-- Live Stats: FPS + Battery Indicators -->
+                            <!-- Right: Single Stream FPS Counter + Battery -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                                <!-- Real-Time Live Stream FPS -->
-                                <Border Background="#171717"
+                                <!-- Real-Time FPS Badge (Visible ONLY when mirroring is active) -->
+                                <Border Background="#161617"
                                         BorderBrush="{StaticResource BrushHairline}"
                                         BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="14,10"
-                                        Margin="0,0,8,0">
+                                        CornerRadius="12"
+                                        Padding="14,8"
+                                        Margin="0,0,10,0"
+                                        Visibility="{Binding IsMirroringActive, Converter={StaticResource BoolToVis}}">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="STREAM FPS" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="STREAM FPS" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding FpsDisplay}"
                                                    FontFamily="{StaticResource FontSans}"
-                                                   FontSize="18"
+                                                   FontSize="16"
                                                    FontWeight="Bold"
                                                    Foreground="{StaticResource BrushBlue}"
                                                    HorizontalAlignment="Center"
@@ -316,17 +337,17 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Battery Indicator -->
-                                <Border Background="#171717"
+                                <!-- Battery Level -->
+                                <Border Background="#161617"
                                         BorderBrush="{StaticResource BrushHairline}"
                                         BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="14,10">
+                                        CornerRadius="12"
+                                        Padding="14,8">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="BATTERY" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" HorizontalAlignment="Center" />
-                                        <TextBlock Text="{Binding SelectedDevice.BatteryDisplay, FallbackValue='90%'}"
+                                        <TextBlock Text="BATTERY" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding SelectedDevice.BatteryDisplay, FallbackValue='88%'}"
                                                    FontFamily="{StaticResource FontSans}"
-                                                   FontSize="18"
+                                                   FontSize="16"
                                                    FontWeight="Bold"
                                                    Foreground="{StaticResource BrushInk}"
                                                    HorizontalAlignment="Center"
@@ -336,74 +357,73 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Device Visual / Info HUD Box -->
+                        <!-- Hero Center: Visual Phone Stage -->
                         <Border Grid.Row="1"
-                                Background="#0A0A0A"
+                                Background="#101012"
                                 BorderBrush="{StaticResource BrushHairline}"
                                 BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="18"
-                                Margin="0,0,0,16">
-                            <Grid VerticalAlignment="Center">
-                                <!-- When Stream is Idle -->
+                                CornerRadius="16"
+                                Padding="20"
+                                Margin="0,0,0,20">
+                            <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <!-- Idle Stage -->
                                 <StackPanel HorizontalAlignment="Center" Visibility="{Binding IsMirroringActive, Converter={StaticResource InverseBoolToVis}}">
-                                    <Border Width="54" Height="54" CornerRadius="14" Background="#000000" BorderBrush="#262626" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,10" ClipToBounds="True">
-                                        <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="4" />
+                                    <Border Width="60" Height="60" CornerRadius="16" Background="#161617" BorderBrush="#2A2A2C" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,14" ClipToBounds="True">
+                                        <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="6" />
                                     </Border>
-                                    <TextBlock Text="Low-Latency Mirror Ready"
+                                    <TextBlock Text="Ready for High-Speed Mirroring"
                                                FontFamily="{StaticResource FontSans}"
-                                               FontSize="14"
+                                               FontSize="16"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource BrushInk}"
                                                HorizontalAlignment="Center"
-                                               Margin="0,0,0,3" />
-                                    <TextBlock Text="Click ▶ START MIRRORING to launch phone screen on PC."
+                                               Margin="0,0,0,4" />
+                                    <TextBlock Text="Click Start Mirroring to launch phone display on your PC with full mouse &amp; keyboard control."
                                                FontFamily="{StaticResource FontSans}"
-                                               FontSize="11"
+                                               FontSize="12"
                                                Foreground="{StaticResource BrushBody}"
                                                HorizontalAlignment="Center"
-                                               Margin="0,0,0,8" />
-                                    <!-- Quick Feature Badges -->
+                                               Margin="0,0,0,12" />
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,0,6,0">
-                                            <TextBlock Text="⌨ PC Keyboard Input" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" />
+                                        <Border Background="#1A1A1E" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,8,0">
+                                            <TextBlock Text="{Binding SelectedResolution, FallbackValue='1080p FHD'}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushBody}" />
                                         </Border>
-                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,0,6,0">
-                                            <TextBlock Text="🖱 Drag &amp; Click" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" />
+                                        <Border Background="#1A1A1E" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,8,0">
+                                            <TextBlock Text="{Binding SelectedFps, FallbackValue='60 FPS'}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushBody}" />
                                         </Border>
-                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="8,3">
-                                            <TextBlock Text="⚡ Zero Lag Wi-Fi" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" />
+                                        <Border Background="#1A1A1E" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="8" Padding="10,4">
+                                            <TextBlock Text="Zero Lag Input" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushSuccess}" />
                                         </Border>
                                     </StackPanel>
                                 </StackPanel>
 
-                                <!-- When Stream is Active -->
+                                <!-- Active Mirroring Stage -->
                                 <StackPanel HorizontalAlignment="Center" Visibility="{Binding IsMirroringActive, Converter={StaticResource BoolToVis}}">
-                                    <Border Width="54" Height="54" CornerRadius="14" Background="#05192D" BorderBrush="#0070F3" BorderThickness="1.5" HorizontalAlignment="Center" Margin="0,0,0,10" ClipToBounds="True">
-                                        <TextBlock Text="●" FontSize="26" Foreground="#0070F3" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <Border Width="60" Height="60" CornerRadius="16" Background="#0A1D36" BorderBrush="{StaticResource BrushBlue}" BorderThickness="1.5" HorizontalAlignment="Center" Margin="0,0,0,14">
+                                        <TextBlock Text="●" FontSize="30" Foreground="{StaticResource BrushBlue}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <TextBlock Text="Live Stream In Progress"
+                                    <TextBlock Text="Live Mirroring In Progress"
                                                FontFamily="{StaticResource FontSans}"
-                                               FontSize="14"
+                                               FontSize="16"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource BrushBlue}"
                                                HorizontalAlignment="Center"
-                                               Margin="0,0,0,3" />
-                                    <TextBlock Text="Phone screen mirrored to PC. Control directly with your mouse &amp; keyboard."
+                                               Margin="0,0,0,4" />
+                                    <TextBlock Text="Companion tool bar attached to phone window. Control directly with mouse &amp; keyboard."
                                                FontFamily="{StaticResource FontSans}"
-                                               FontSize="11"
+                                               FontSize="12"
                                                Foreground="{StaticResource BrushBody}"
                                                HorizontalAlignment="Center"
-                                               Margin="0,0,0,8" />
+                                               Margin="0,0,0,12" />
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="10,3" Margin="0,0,6,0">
+                                        <Border Background="#1A1A1E" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,8,0">
                                             <TextBlock Text="{Binding SelectedResolution}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushBody}" />
                                         </Border>
                                         <!-- Active Recording Indicator -->
-                                        <Border Background="#2B0000" BorderBrush="#DC2626" BorderThickness="1" CornerRadius="6" Padding="10,3"
+                                        <Border Background="#330000" BorderBrush="{StaticResource BrushError}" BorderThickness="1" CornerRadius="8" Padding="10,4"
                                                 Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
                                             <StackPanel Orientation="Horizontal">
-                                                <Ellipse Width="6" Height="6" Fill="#DC2626" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                                <Ellipse Width="6" Height="6" Fill="{StaticResource BrushError}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                                 <TextBlock Text="{Binding RecordingTimerText, StringFormat='REC {0}'}" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF" />
                                             </StackPanel>
                                         </Border>
@@ -412,103 +432,137 @@
                             </Grid>
                         </Border>
 
-                        <!-- Hero Launch Actions (Dynamic Start/Stop State) -->
-                        <StackPanel Grid.Row="2" Orientation="Vertical">
+                        <!-- Hero Bottom: 1-Click Launch Button & Essential Action Capsules -->
+                        <StackPanel Grid.Row="2">
+                            <!-- Primary Launch Pill -->
                             <Button Content="{Binding MirrorButtonText}"
                                     Background="{Binding MirrorButtonBackground}"
                                     Foreground="{Binding MirrorButtonForeground}"
-                                    Style="{StaticResource GeistButtonPillPrimary}"
-                                    Height="44"
+                                    Style="{StaticResource AppleActionPill}"
+                                    Height="48"
                                     FontSize="15"
-                                    FontWeight="Bold"
                                     Command="{Binding StartMirrorCommand}"
-                                    Margin="0,0,0,10" />
+                                    Margin="0,0,0,14" />
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                            <!-- 4 Essential Action Capsules -->
+                            <UniformGrid Columns="4" Rows="1">
+                                <!-- 1. Phone Storage Drive -->
+                                <Button Style="{StaticResource AppleQuickCardButton}"
+                                        Command="{Binding TogglePhoneStorageCommand}"
+                                        ToolTip="Mount phone storage as a Windows drive in File Explorer"
+                                        Height="42" Margin="0,0,6,0">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="📁" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding PhoneStorageButtonText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
 
-                                <Button Grid.Column="0"
-                                        Content="{Binding SelectedDevice.SwitchModeText, FallbackValue='📶 Switch to Wireless'}"
-                                        Style="{StaticResource GeistButtonPillSecondary}"
-                                        Command="{Binding SwitchModeCommand}" />
+                                <!-- 2. Sync Clipboard -->
+                                <Button Style="{StaticResource AppleQuickCardButton}"
+                                        Command="{Binding SyncClipboardCommand}"
+                                        ToolTip="Sync clipboard text between PC and Phone"
+                                        Height="42" Margin="0,0,6,0">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="📋" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="Sync Clipboard" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
 
-                                <Button Grid.Column="2"
-                                        Content="{Binding SelectedDevice.DisconnectOrReconnectText, FallbackValue='✕ Disconnect'}"
-                                        Style="{StaticResource GeistButtonPillSecondary}"
-                                        Command="{Binding DisconnectOrResetCommand}" />
-                            </Grid>
+                                <!-- 3. Screenshot -->
+                                <Button Style="{StaticResource AppleQuickCardButton}"
+                                        Command="{Binding TakeScreenshotCommand}"
+                                        ToolTip="Take high-resolution screenshot"
+                                        Height="42" Margin="0,0,6,0">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="📸" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="Screenshot" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- 4. Screen Recording -->
+                                <Button Style="{StaticResource AppleQuickCardButton}"
+                                        Command="{Binding ToggleRecordingCommand}"
+                                        ToolTip="Record screen and audio to MP4"
+                                        Background="{Binding RecordButtonBackground}"
+                                        Foreground="{Binding RecordButtonForeground}"
+                                        Height="42">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="🔴" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding RecordButtonText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </UniformGrid>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- Empty State (When no device connected) -->
-                <Border Grid.Row="2"
+                <!-- Hero Section: When NO Device is Connected -->
+                <Border Grid.Row="1"
                         Background="{StaticResource BrushCanvasElevated}"
                         BorderBrush="{StaticResource BrushHairline}"
                         BorderThickness="1"
-                        CornerRadius="12"
-                        Padding="32"
+                        CornerRadius="18"
+                        Padding="36"
                         Visibility="{Binding SelectedDevice, Converter={StaticResource InverseNullToVis}}">
                     <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
                         <StackPanel HorizontalAlignment="Center">
-                            <Border Width="64" Height="64" CornerRadius="14" Background="#000000" BorderBrush="#262626" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,16" ClipToBounds="True">
-                                <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="4" />
+                            <Border Width="68" Height="68" CornerRadius="18" Background="#161617" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,18" ClipToBounds="True">
+                                <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="8" />
                             </Border>
-                            <TextBlock Text="No Android Device Detected"
+                            <TextBlock Text="No Android Device Connected"
                                        FontFamily="{StaticResource FontSans}"
-                                       FontSize="18"
+                                       FontSize="20"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource BrushInk}"
                                        HorizontalAlignment="Center"
                                        Margin="0,0,0,8" />
-                            <TextBlock Text="Choose a connection method below to start mirroring:"
+                            <TextBlock Text="Connect your phone via USB cable or link wirelessly over Wi-Fi."
                                        FontFamily="{StaticResource FontSans}"
                                        FontSize="13"
                                        Foreground="{StaticResource BrushBody}"
                                        HorizontalAlignment="Center"
-                                       Margin="0,0,0,20" />
+                                       Margin="0,0,0,24" />
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Content="⚡ Connect via USB"
-                                        Style="{StaticResource GeistButtonPillPrimary}"
+                                <Button Content="⚡ Connect via USB Cable"
+                                        Style="{StaticResource AppleActionPill}"
                                         Command="{Binding OpenUsbConnectCommand}"
-                                        Margin="0,0,10,0" />
+                                        Margin="0,0,12,0" />
 
-                                <Button Content="📶 Connect Wirelessly"
-                                        Style="{StaticResource GeistButtonPillSecondary}"
-                                        Command="{Binding OpenWirelessDialogCommand}" />
+                                <Button Content="📡 Pair Wirelessly"
+                                        Style="{StaticResource AppleQuickCardButton}"
+                                        Padding="20,10"
+                                        Height="46"
+                                        Command="{Binding SetActiveTabCommand}"
+                                        CommandParameter="Wireless" />
                             </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- Drag & Drop Dropzone Box (With Animated Glowing Response & Live Upload Progress) -->
+                <!-- File Sharing Drop Zone -->
                 <Border x:Name="DropZoneBorder"
-                        Grid.Row="3"
+                        Grid.Row="2"
                         Background="{StaticResource BrushCanvasElevated}"
                         BorderBrush="{StaticResource BrushHairline}"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="14,10"
+                        CornerRadius="14"
+                        Padding="16,12"
                         Margin="0,14,0,0"
                         AllowDrop="True">
                     <Grid>
-                        <!-- Normal Idle Dropzone State -->
+                        <!-- Normal Idle State -->
                         <Grid Visibility="{Binding IsUploading, Converter={StaticResource InverseBoolToVis}}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <TextBlock x:Name="DropZoneIcon" Text="📥" FontSize="18" Margin="0,0,12,0" VerticalAlignment="Center" />
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock x:Name="DropZoneText"
-                                               Text="Drag &amp; drop files to share with phone"
+                                               Text="Drag &amp; drop files anywhere to share instantly with phone"
                                                FontFamily="{StaticResource FontSans}"
                                                FontSize="12"
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushInk}" />
-                                    <TextBlock Text="Images &amp; Videos ➔ DCIM/Mirrivo Shared  •  APKs &amp; Files ➔ Downloads"
+                                    <TextBlock Text="Images &amp; Videos ➔ DCIM/Mirrivo Shared  •  APKs &amp; Documents ➔ Downloads"
                                                FontFamily="{StaticResource FontMono}"
                                                FontSize="10"
                                                Foreground="{StaticResource BrushMute}"
@@ -517,7 +571,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Live Uploading Progress State -->
+                        <!-- Live Uploading State -->
                         <Grid Visibility="{Binding IsUploading, Converter={StaticResource BoolToVis}}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -532,16 +586,16 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="⚡" FontSize="13" Foreground="#0070F3" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="⚡" FontSize="13" Foreground="{StaticResource BrushBlue}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="{Binding UploadFileName}"
                                                FontFamily="{StaticResource FontSans}"
                                                FontSize="12"
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushInk}"
                                                TextTrimming="CharacterEllipsis"
-                                               MaxWidth="180"
+                                               MaxWidth="240"
                                                VerticalAlignment="Center" />
-                                    <Border Background="#141414"
+                                    <Border Background="#1A1A1E"
                                             BorderBrush="{StaticResource BrushHairline}"
                                             BorderThickness="1"
                                             CornerRadius="4"
@@ -552,11 +606,10 @@
                                                    FontFamily="{StaticResource FontMono}"
                                                    FontSize="9"
                                                    FontWeight="SemiBold"
-                                                   Foreground="#10B981" />
+                                                   Foreground="{StaticResource BrushSuccess}" />
                                     </Border>
                                 </StackPanel>
 
-                                <!-- Status / Progress Details -->
                                 <TextBlock Grid.Column="1"
                                            Text="{Binding UploadStatusDetails}"
                                            FontFamily="{StaticResource FontMono}"
@@ -564,9 +617,8 @@
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushBlue}"
                                            VerticalAlignment="Center"
-                                           Margin="0,0,10,0" />
+                                           Margin="0,0,12,0" />
 
-                                <!-- Cancel Upload Button -->
                                 <Button Grid.Column="2"
                                         Content="✕ Cancel"
                                         Style="{StaticResource GeistButtonSquare}"
@@ -577,14 +629,13 @@
                                         Command="{Binding CancelUploadCommand}" />
                             </Grid>
 
-                            <!-- Animated Gradient Progress Bar -->
                             <ProgressBar Grid.Row="1"
-                                         Height="6"
+                                         Height="4"
                                          Minimum="0"
                                          Maximum="100"
                                          Value="{Binding UploadProgressPercent}"
                                          Foreground="{StaticResource BrushBlue}"
-                                         Background="#171717"
+                                         Background="#1D1D20"
                                          BorderThickness="0" />
                         </Grid>
                     </Grid>
@@ -592,243 +643,403 @@
             </Grid>
 
             <!-- ==============================================
-                 RIGHT COLUMN: CONTROLS & STREAM CONFIGURATION
+                 TAB 2: SETTINGS (macOS SYSTEM SETTINGS STYLE)
                  ============================================== -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding ActiveTab, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Settings}">
+                <StackPanel MaxWidth="760" HorizontalAlignment="Center" Margin="0,8,0,24">
+                    <!-- Section Title -->
+                    <TextBlock Text="Preferences &amp; Stream Settings"
+                               FontFamily="{StaticResource FontSans}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource BrushInk}"
+                               Margin="0,0,0,6" />
+                    <TextBlock Text="Customize video quality, framerate, audio output, and mirroring behaviors."
+                               FontFamily="{StaticResource FontSans}"
+                               FontSize="13"
+                               Foreground="{StaticResource BrushMute}"
+                               Margin="0,0,0,20" />
 
-                <TextBlock Grid.Row="0"
-                           Text="STREAM &amp; HARDWARE CONTROLS"
-                           FontFamily="{StaticResource FontMono}"
-                           FontSize="11"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource BrushMute}"
-                           Margin="0,0,0,10" />
+                    <!-- Group 1: Video & Audio Quality -->
+                    <Border Background="{StaticResource BrushCanvasElevated}"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="22"
+                            Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="VIDEO &amp; AUDIO STREAM QUALITY"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrushMute}"
+                                       Margin="0,0,0,16" />
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="0,0,4,0">
-                        <!-- 1. Hardware Quick Remote Toolbar -->
-                        <Border Background="{StaticResource BrushCanvasElevated}"
-                                BorderBrush="{StaticResource BrushHairline}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Padding="16"
-                                Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="HARDWARE // REMOTE ACTIONS"
-                                           FontFamily="{StaticResource FontMono}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushMute}"
-                                           Margin="0,0,0,12" />
-
-                                <UniformGrid Columns="4" Rows="3" Margin="0,0,0,0" IsEnabled="{Binding HasSelectedDevice}">
-                                    <Button Content="⮌ Back" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding SendKeyCommand}" CommandParameter="Back" />
-                                    <Button Content="○ Home" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding SendKeyCommand}" CommandParameter="Home" />
-                                    <Button Content="□ Apps" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding SendKeyCommand}" CommandParameter="AppSwitch" />
-                                    <Button Content="⏻ Power" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding SendKeyCommand}" CommandParameter="Power" />
-
-                                    <Button Content="＋ Vol Up" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding SendKeyCommand}" CommandParameter="VolUp" />
-                                    <Button Content="－ Vol Dn" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding SendKeyCommand}" CommandParameter="VolDown" />
-                                    <Button Content="📷 Snap" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding TakeScreenshotCommand}" />
-                                    <Button Content="⏹ Stop" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            Command="{Binding StopMirrorCommand}" />
-
-                                    <!-- Screen Recording Button with Dynamic Timer -->
-                                    <Button Content="{Binding RecordButtonText}"
-                                            Background="{Binding RecordButtonBackground}"
-                                            Foreground="{Binding RecordButtonForeground}"
-                                            Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            ToolTip="Record screen and phone audio to MP4"
-                                            Command="{Binding ToggleRecordingCommand}" />
-
-                                    <!-- Clipboard Sync -->
-                                    <Button Content="📋 Sync Clip" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            ToolTip="Sync clipboard text between PC and Phone"
-                                            Command="{Binding SyncClipboardCommand}" />
-
-                                    <!-- Screen Off Toggle -->
-                                    <Button Content="🌙 Screen Off" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            ToolTip="Toggle phone display on/off while mirroring"
-                                            Command="{Binding TogglePhoneDisplayCommand}" />
-
-                                    <!-- Phone File Explorer Drive -->
-                                    <Button Content="{Binding PhoneStorageButtonText}" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
-                                            ToolTip="Mount phone storage as a Windows drive in File Explorer"
-                                            Command="{Binding TogglePhoneStorageCommand}" />
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 2. Stream Quality Tuning (Custom Geist Dropdowns) -->
-                        <Border Background="{StaticResource BrushCanvasElevated}"
-                                BorderBrush="{StaticResource BrushHairline}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Padding="16"
-                                Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="STREAM TUNING // QUALITY"
-                                           FontFamily="{StaticResource FontMono}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushMute}"
-                                           Margin="0,0,0,12" />
-
-                                <!-- Latency Mode -->
-                                <TextBlock Text="LATENCY PRESET" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
-                                <ComboBox ItemsSource="{Binding LatencyOptions}"
-                                          SelectedItem="{Binding SelectedLatency}"
-                                          Style="{StaticResource GeistComboBox}"
-                                          Margin="0,0,0,12" />
-
-                                <!-- Resolution -->
-                                <TextBlock Text="RESOLUTION" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
-                                <ComboBox ItemsSource="{Binding ResolutionOptions}"
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Resolution" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Display resolution of the mirror window" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding ResolutionOptions}"
                                           SelectedItem="{Binding SelectedResolution}"
-                                          Style="{StaticResource GeistComboBox}"
-                                          Margin="0,0,0,12" />
+                                          Style="{StaticResource GeistComboBox}" />
+                            </Grid>
 
-                                <!-- Bitrate -->
-                                <TextBlock Text="VIDEO BITRATE" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
-                                <ComboBox ItemsSource="{Binding BitrateOptions}"
-                                          SelectedItem="{Binding SelectedBitrate}"
-                                          Style="{StaticResource GeistComboBox}"
-                                          Margin="0,0,0,12" />
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
 
-                                <!-- FPS -->
-                                <TextBlock Text="FRAME RATE" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
-                                <ComboBox ItemsSource="{Binding FpsOptions}"
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Frame Rate (FPS)" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Maximum streaming target frame rate" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding FpsOptions}"
                                           SelectedItem="{Binding SelectedFps}"
-                                          Style="{StaticResource GeistComboBox}"
-                                          Margin="0,0,0,12" />
+                                          Style="{StaticResource GeistComboBox}" />
+                            </Grid>
 
-                                <!-- Audio Routing -->
-                                <TextBlock Text="AUDIO ROUTING" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
-                                <ComboBox ItemsSource="{Binding AudioRoutingOptions}"
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Video Bitrate" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Encoding bit rate for sharpness and bandwidth" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding BitrateOptions}"
+                                          SelectedItem="{Binding SelectedBitrate}"
+                                          Style="{StaticResource GeistComboBox}" />
+                            </Grid>
+
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Latency Preset" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Buffer size trade-off between smoothness &amp; latency" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding LatencyOptions}"
+                                          SelectedItem="{Binding SelectedLatency}"
+                                          Style="{StaticResource GeistComboBox}" />
+                            </Grid>
+
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Audio Routing" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Stream phone audio to PC speakers or keep on phone" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding AudioRoutingOptions}"
                                           SelectedItem="{Binding SelectedAudioRouting}"
                                           Style="{StaticResource GeistComboBox}" />
-                            </StackPanel>
-                        </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
-                        <!-- 3. Optimizations & Live Reactive Switches -->
-                        <Border Background="{StaticResource BrushCanvasElevated}"
-                                BorderBrush="{StaticResource BrushHairline}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="OPTIMIZATIONS // HARDWARE"
+                    <!-- Group 2: Behavioral & Optimization Toggles -->
+                    <Border Background="{StaticResource BrushCanvasElevated}"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="22">
+                        <StackPanel>
+                            <TextBlock Text="BEHAVIORS &amp; PERFORMANCE"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrushMute}"
+                                       Margin="0,0,0,16" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Keep Mirror Window Always on Top" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Keep the phone window floating above all other desktop applications" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding AlwaysOnTop}" Style="{StaticResource GeistToggleSwitch}" />
+                            </Grid>
+
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Stay Awake" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Prevent phone display and lockscreen from sleeping while connected" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding StayAwake}" Style="{StaticResource GeistToggleSwitch}" />
+                            </Grid>
+
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Turn Phone Screen Off While Mirroring" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Saves phone battery and prevents physical overheating during long sessions" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding TurnScreenOff}" Style="{StaticResource GeistToggleSwitch}" />
+                            </Grid>
+
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Automatic Clipboard Sync (PC ⇄ Phone)" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Seamlessly copy text on PC and paste directly on phone, and vice-versa" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding ClipboardAutoSync}" Style="{StaticResource GeistToggleSwitch}" />
+                            </Grid>
+
+                            <Separator Background="{StaticResource BrushHairline}" Margin="0,4,0,14" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Ultra-Low Latency Wi-Fi Mode" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                    <TextBlock Text="Bypasses buffering queues for instant mouse responsiveness over Wi-Fi" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding Config.LowLatencyWifiMode}" Style="{StaticResource GeistToggleSwitch}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ==============================================
+                 TAB 3: WIRELESS (EFFORTLESS WI-FI PAIRING)
+                 ============================================== -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding ActiveTab, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Wireless}">
+                <StackPanel MaxWidth="620" HorizontalAlignment="Center" Margin="0,12,0,24">
+                    <TextBlock Text="Wireless ADB Link"
+                               FontFamily="{StaticResource FontSans}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource BrushInk}"
+                               Margin="0,0,0,6" />
+                    <TextBlock Text="Connect your Android device wirelessly over your local Wi-Fi network without cables."
+                               FontFamily="{StaticResource FontSans}"
+                               FontSize="13"
+                               Foreground="{StaticResource BrushMute}"
+                               Margin="0,0,0,20" />
+
+                    <!-- Quick Switch USB to Wireless (If USB device is plugged in) -->
+                    <Border Background="#101012"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="16"
+                            Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Have a phone connected via USB right now?" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
+                                <TextBlock Text="Convert it to wireless with 1 click. You can unplug the cable immediately after!" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Content="📶 Convert to Wi-Fi"
+                                    Style="{StaticResource AppleActionPill}"
+                                    Height="36"
+                                    Padding="16,0"
+                                    FontSize="12"
+                                    Command="{Binding SwitchModeCommand}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Direct Connect Card -->
+                    <Border Background="{StaticResource BrushCanvasElevated}"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="24">
+                        <StackPanel>
+                            <!-- Mode Switcher Pill -->
+                            <Border Background="#101012"
+                                    BorderBrush="{StaticResource BrushHairline}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="3"
+                                    Margin="0,0,0,18">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Content="Direct IP (Port 5555)"
+                                            Style="{StaticResource AppleSegmentTab}"
+                                            Command="{Binding SetWirelessModeCommand}"
+                                            CommandParameter="Direct" />
+                                    <Button Grid.Column="1"
+                                            Content="Pair with Code (Android 11+)"
+                                            Style="{StaticResource AppleSegmentTab}"
+                                            Command="{Binding SetWirelessModeCommand}"
+                                            CommandParameter="Pair" />
+                                </Grid>
+                            </Border>
+
+                            <!-- IP Address Input -->
+                            <TextBlock Text="PHONE IP ADDRESS" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushMute}" Margin="0,0,0,6" />
+                            <TextBox Style="{StaticResource GeistTextBox}"
+                                     Text="{Binding WirelessIp, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,14" />
+
+                            <!-- Port Input -->
+                            <TextBlock Text="PORT" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushMute}" Margin="0,0,0,6" />
+                            <TextBox Style="{StaticResource GeistTextBox}"
+                                     Text="{Binding WirelessPort, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,14" />
+
+                            <!-- Pairing Code (Visible only when pairing mode is active) -->
+                            <StackPanel Visibility="{Binding IsWirelessPairingMode, Converter={StaticResource BoolToVis}}" Margin="0,0,0,14">
+                                <TextBlock Text="6-DIGIT PAIRING CODE" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushMute}" Margin="0,0,0,6" />
+                                <TextBox Style="{StaticResource GeistTextBox}"
+                                         Text="{Binding WirelessPairCode, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+
+                            <!-- Connect Button -->
+                            <Button Content="{Binding IsConnectingWireless, Converter={x:Null}, FallbackValue='Connect Wirelessly'}"
+                                    Style="{StaticResource AppleActionPill}"
+                                    Command="{Binding ConnectWirelessDirectCommand}"
+                                    IsEnabled="{Binding IsConnectingWireless, Converter={StaticResource InverseBoolToVis}}"
+                                    Margin="0,6,0,10" />
+
+                            <!-- Status Message -->
+                            <TextBlock Text="{Binding WirelessStatusMessage}"
+                                       FontFamily="{StaticResource FontMono}"
+                                       FontSize="11"
+                                       Foreground="{StaticResource BrushBlue}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,14" />
+
+                            <!-- Instructions -->
+                            <Border Background="#101012" CornerRadius="10" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="HOW TO CONNECT:" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushMute}" Margin="0,0,0,4" />
+                                    <TextBlock Text="1. Ensure PC and Phone are on the same Wi-Fi." FontSize="11" Foreground="{StaticResource BrushBody}" Margin="0,2" />
+                                    <TextBlock Text="2. On Phone: Settings ➔ Developer Options ➔ Wireless Debugging (ON)." FontSize="11" Foreground="{StaticResource BrushBody}" Margin="0,2" />
+                                    <TextBlock Text="3. Enter the IP &amp; Port shown on your phone and tap Connect." FontSize="11" Foreground="{StaticResource BrushBody}" Margin="0,2" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ==============================================
+                 TAB 4: CONSOLE (DIAGNOSTICS & ADB LOGS)
+                 ============================================== -->
+            <Grid Visibility="{Binding ActiveTab, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Console}">
+                <Border Background="#0C0C0E"
+                        BorderBrush="{StaticResource BrushHairline}"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Padding="20">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,14">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="DIAGNOSTIC TERMINAL &amp; ADB LOGS"
                                            FontFamily="{StaticResource FontMono}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushMute}"
-                                           Margin="0,0,0,10" />
-
-                                <!-- Clipboard Auto-Sync (PC ⇄ Phone) -->
-                                <CheckBox Content="Clipboard Auto-Sync (PC ⇄ Phone)"
-                                          IsChecked="{Binding ClipboardAutoSync}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <!-- Keep Mirror Window Always On Top (Real-Time Live Win32) -->
-                                <CheckBox Content="Keep mirror window always on top"
-                                          IsChecked="{Binding AlwaysOnTop}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <!-- Stay Awake (Single Unified Option) -->
-                                <CheckBox Content="Stay Awake (Keep screen awake &amp; prevent sleep)"
-                                          IsChecked="{Binding StayAwake}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <!-- Turn phone display off while mirroring -->
-                                <CheckBox Content="Turn phone display off while mirroring"
-                                          IsChecked="{Binding TurnScreenOff}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <CheckBox Content="Ultra-Low Latency Wi-Fi Mode (Zero buffering)"
-                                          IsChecked="{Binding Config.LowLatencyWifiMode}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
-
-                                <CheckBox Content="Forward audio to PC speakers"
-                                          IsChecked="{Binding Config.ForwardAudio}"
-                                          Style="{StaticResource GeistToggleSwitch}" />
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource BrushMute}" />
                             </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+
+                            <Button Content="Clear Logs"
+                                    Style="{StaticResource GeistButtonSquare}"
+                                    Height="28"
+                                    FontSize="11"
+                                    Padding="12,2"
+                                    HorizontalAlignment="Right"
+                                    Command="{Binding ClearLogsCommand}" />
+                        </Grid>
+
+                        <!-- Logs List -->
+                        <ListBox Grid.Row="1"
+                                 ItemsSource="{Binding Logs}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,3">
+                                        <TextBlock Text="{Binding TimeFormatted}"
+                                                   FontFamily="{StaticResource FontMono}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource BrushMute}"
+                                                   Margin="0,0,10,0" />
+                                        <TextBlock Text="{Binding Message}"
+                                                   FontFamily="{StaticResource FontMono}"
+                                                   FontSize="11"
+                                                   Foreground="{Binding LevelColor}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
 
-        <!-- 4. Bottom Collapsible Console Drawer (Geist Terminal) -->
-        <Border Grid.Row="3"
-                Background="#080808"
-                BorderBrush="{StaticResource BrushHairline}"
-                BorderThickness="0,1,0,0"
-                Height="160"
-                Visibility="{Binding IsConsoleExpanded, Converter={StaticResource BoolToVis}}">
-            <Grid Margin="16,8">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0" Margin="0,0,0,6">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="TERMINAL // ADB &amp; SCRCPY LOGS"
-                                   FontFamily="{StaticResource FontMono}"
-                                   FontSize="10"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrushMute}" />
-                    </StackPanel>
-                    <Button Content="Clear"
-                            Style="{StaticResource GeistButtonSquare}"
-                            Height="24"
-                            FontSize="11"
-                            Padding="8,2"
-                            HorizontalAlignment="Right"
-                            Command="{Binding ClearLogsCommand}" />
-                </Grid>
-
-                <ListBox Grid.Row="1"
-                         ItemsSource="{Binding Logs}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="0,2">
-                                <TextBlock Text="{Binding TimeFormatted}"
-                                           FontFamily="{StaticResource FontMono}"
-                                           FontSize="11"
-                                           Foreground="{StaticResource BrushMute}"
-                                           Margin="0,0,8,0" />
-                                <TextBlock Text="{Binding Message}"
-                                           FontFamily="{StaticResource FontMono}"
-                                           FontSize="11"
-                                           Foreground="{Binding LevelColor}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
-        </Border>
-
-        <!-- 5. Footer Status Bar (Shows Exact Connected Devices Details) -->
-        <Border Grid.Row="4"
+        <!-- ==============================================
+             3. FOOTER STATUS BAR
+             ============================================== -->
+        <Border Grid.Row="2"
                 Background="{StaticResource BrushCanvas}"
                 BorderBrush="{StaticResource BrushHairline}"
                 BorderThickness="0,1,0,0"
-                Padding="24,0">
+                Padding="20,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -836,21 +1047,20 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="TARGETS // "
+                    <TextBlock Text="TARGET // "
                                FontFamily="{StaticResource FontMono}"
                                FontSize="10"
                                Foreground="{StaticResource BrushMute}"
                                VerticalAlignment="Center" />
-                    <!-- Exact Device Details displayed here! -->
                     <TextBlock Text="{Binding DetailedDevicesSummary}"
                                FontFamily="{StaticResource FontMono}"
-                               FontSize="11"
-                               Foreground="#EDEDED"
+                               FontSize="10"
+                               Foreground="{StaticResource BrushBody}"
                                VerticalAlignment="Center" />
                 </StackPanel>
 
                 <TextBlock Grid.Column="1"
-                           Text="MIRRIVO ENGINE ✦ POWERED BY SCRCPY 5.0 &amp; ADB"
+                           Text="MIRRIVO ENGINE ✦ SCRCPY 5.0 &amp; ADB"
                            FontFamily="{StaticResource FontMono}"
                            FontSize="10"
                            Foreground="{StaticResource BrushMute}"

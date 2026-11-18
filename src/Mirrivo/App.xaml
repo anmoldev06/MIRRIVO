@@ -16,6 +16,10 @@
             <converters:CountToVisibilityConverter x:Key="CountToVis" MinCount="1" />
             <converters:CountToVisibilityConverter x:Key="MultiCountToVis" MinCount="2" />
             <converters:HexToBrushConverter x:Key="HexToBrush" />
+            <converters:StringEqualsToVisibilityConverter x:Key="StringEqualsToVis" />
+            <converters:StringEqualsToVisibilityConverter x:Key="StringNotEqualsToVis" Invert="True" />
+            <converters:StringEqualsToBrushConverter x:Key="NavTabActiveBackground" ActiveBrush="#252528" InactiveBrush="Transparent" />
+            <converters:StringEqualsToBrushConverter x:Key="NavTabActiveForeground" ActiveBrush="#FFFFFF" InactiveBrush="#86868B" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
