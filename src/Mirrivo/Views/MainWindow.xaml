@@ -980,12 +980,8 @@
 
                     <!-- 3. VIEW MODE A: APPLE LAUNCHPAD GRID (DEFAULT) -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <ScrollViewer.Visibility>
-                            <MultiBinding Converter="{x:Null}">
-                                <!-- Simple Visibility bound to AppsViewMode -->
-                            </MultiBinding>
-                        </ScrollViewer.Visibility>
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding IsLoadingApps, Converter={StaticResource InverseBoolToVis}}">
                         <Grid>
                             <!-- Grid Mode Container -->
                             <ItemsControl ItemsSource="{Binding FilteredApps}"
