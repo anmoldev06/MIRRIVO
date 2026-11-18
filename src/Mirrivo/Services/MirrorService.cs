@@ -428,6 +428,7 @@ public class MirrorService
             $"-s {device.Serial}",
             "--new-display=1080x2160/400",
             "--no-vd-system-decorations",
+            "--display-ime-policy=hide",
             $"--start-app={packageName}",
             $"--window-title=\"{title}\"",
             "--video-bit-rate=8M",
