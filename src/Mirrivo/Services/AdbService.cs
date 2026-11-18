@@ -349,10 +349,11 @@ public class AdbService
         return (false, msg);
     }
 
-    public async Task<(bool Success, string Message)> DisconnectAsync(string address)
+    public async Task<(bool Success, string Message)> DisconnectAsync(string address = "")
     {
-        Log($"Disconnecting {address}...", LogLevel.Command);
-        var (code, output, _) = await RunAdbCommandAsync($"disconnect {address}");
+        string cmd = string.IsNullOrWhiteSpace(address) ? "disconnect" : $"disconnect {address.Trim()}";
+        Log($"Disconnecting wireless link {(string.IsNullOrWhiteSpace(address) ? "all" : address)}...", LogLevel.Command);
+        var (code, output, _) = await RunAdbCommandAsync(cmd);
         Log(output, LogLevel.Info);
         return (code == 0, output);
     }

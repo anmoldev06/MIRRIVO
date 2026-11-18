@@ -334,6 +334,23 @@
                                                    FontSize="10"
                                                    Foreground="{StaticResource BrushMute}" />
                                     </Border>
+                                    <!-- Wireless Disconnect Pill -->
+                                    <Button Style="{StaticResource AppleSegmentTab}"
+                                            Content="🔌 Disconnect"
+                                            Height="22"
+                                            Padding="8,0"
+                                            FontSize="9.5"
+                                            FontWeight="SemiBold"
+                                            Background="#FFF0F0"
+                                            Foreground="#FF3B30"
+                                            BorderBrush="#FFD6D6"
+                                            BorderThickness="1"
+                                            Margin="6,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding DisconnectWirelessCommand}"
+                                            CommandParameter="{Binding SelectedDevice.Serial}"
+                                            Visibility="{Binding SelectedDevice.IsWireless, Converter={StaticResource BoolToVis}}"
+                                            ToolTip="Disconnect Wi-Fi link" />
                                 </StackPanel>
 
                                 <TextBlock Text="{Binding SelectedDevice.Model, FallbackValue='Android Device'}"
@@ -1514,6 +1531,42 @@
                                Foreground="{StaticResource BrushMute}"
                                Margin="0,0,0,20" />
 
+                    <!-- Active Wireless Connection Card (Visible when Wi-Fi device is connected) -->
+                    <Border Background="#F0F8FF"
+                            BorderBrush="#D0E2FF"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="18"
+                            Margin="0,0,0,16"
+                            Visibility="{Binding HasWirelessDevice, Converter={StaticResource BoolToVis}}">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="#0071E3" Opacity="0.08" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" Fill="{StaticResource BrushSuccess}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Active Wireless Link Connected" FontWeight="Bold" FontSize="13" Foreground="#0056B3" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ConnectedWirelessDevice.Model, FallbackValue='Wi-Fi Android Phone'}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource BrushInk}" Margin="0,4,0,2" />
+                                <TextBlock Text="{Binding ConnectedWirelessDevice.Serial}" FontFamily="{StaticResource FontMono}" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Content="🔌 Disconnect Wi-Fi"
+                                    Style="{StaticResource AppleActionPill}"
+                                    Background="#FF3B30"
+                                    Height="36"
+                                    Padding="18,0"
+                                    FontSize="12"
+                                    Command="{Binding DisconnectWirelessCommand}"
+                                    CommandParameter="{Binding ConnectedWirelessDevice.Serial}" />
+                        </Grid>
+                    </Border>
+
                     <!-- Quick Switch USB to Wireless (If USB device is plugged in) -->
                     <Border Background="{StaticResource BrushCanvasElevated}"
                             BorderBrush="{StaticResource BrushHairline}"
@@ -1597,12 +1650,32 @@
                                          Text="{Binding WirelessPairCode, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
 
-                            <!-- Connect Button -->
-                            <Button Content="{Binding IsConnectingWireless, Converter={x:Null}, FallbackValue='Connect Wirelessly'}"
-                                    Style="{StaticResource AppleActionPill}"
-                                    Command="{Binding ConnectWirelessDirectCommand}"
-                                    IsEnabled="{Binding IsConnectingWireless, Converter={StaticResource InverseBoolToVis}}"
-                                    Margin="0,6,0,10" />
+                            <!-- Connect & Disconnect Buttons Row -->
+                            <Grid Margin="0,6,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="{Binding IsConnectingWireless, Converter={x:Null}, FallbackValue='Connect Wirelessly'}"
+                                        Style="{StaticResource AppleActionPill}"
+                                        Command="{Binding ConnectWirelessDirectCommand}"
+                                        IsEnabled="{Binding IsConnectingWireless, Converter={StaticResource InverseBoolToVis}}"
+                                        Margin="0,0,8,0" />
+                                <Button Grid.Column="1"
+                                        Content="🔌 Disconnect"
+                                        Style="{StaticResource AppleSegmentTab}"
+                                        Height="48"
+                                        Padding="16,0"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Background="#FFF0F0"
+                                        Foreground="#FF3B30"
+                                        BorderBrush="#FFD6D6"
+                                        BorderThickness="1"
+                                        Command="{Binding DisconnectWirelessCommand}"
+                                        ToolTip="Disconnect active wireless session" />
+                            </Grid>
 
                             <!-- Status Message -->
                             <TextBlock Text="{Binding WirelessStatusMessage}"

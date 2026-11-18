@@ -652,6 +652,8 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(Devices));
         OnPropertyChanged(nameof(SelectedDevice));
         OnPropertyChanged(nameof(HasSelectedDevice));
+        OnPropertyChanged(nameof(HasWirelessDevice));
+        OnPropertyChanged(nameof(ConnectedWirelessDevice));
         OnPropertyChanged(nameof(DetailedDevicesSummary));
         OnPropertyChanged(nameof(IsMirroringActive));
         OnPropertyChanged(nameof(MirrorButtonText));
@@ -982,6 +984,49 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             WirelessStatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsConnectingWireless = false;
+        }
+    }
+
+    public bool HasWirelessDevice => Devices.Any(d => d.IsWireless);
+    public DeviceItem? ConnectedWirelessDevice => Devices.FirstOrDefault(d => d.IsWireless);
+
+    [RelayCommand]
+    public async Task DisconnectWirelessAsync(string? address = null)
+    {
+        string target = address ?? "";
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            if (SelectedDevice != null && SelectedDevice.IsWireless)
+            {
+                target = SelectedDevice.Serial;
+            }
+            else
+            {
+                var wDev = Devices.FirstOrDefault(d => d.IsWireless);
+                if (wDev != null) target = wDev.Serial;
+            }
+        }
+
+        IsConnectingWireless = true;
+        WirelessStatusMessage = "Disconnecting wireless link...";
+        StatusText = "Disconnecting wireless link...";
+
+        try
+        {
+            var (ok, msg) = await _adb.DisconnectAsync(target);
+            WirelessStatusMessage = ok ? "Wireless link disconnected successfully." : msg;
+            StatusText = WirelessStatusMessage;
+            await RefreshDevicesAsync();
+            OnPropertyChanged(nameof(HasWirelessDevice));
+            OnPropertyChanged(nameof(ConnectedWirelessDevice));
+        }
+        catch (Exception ex)
+        {
+            WirelessStatusMessage = $"Disconnect failed: {ex.Message}";
         }
         finally
         {
