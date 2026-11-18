@@ -184,12 +184,20 @@
             </Button>
 
             <!-- 7. Screen Recording (Dynamic Record / Stop) -->
-            <Button Style="{StaticResource FloatingVerticalBtn}"
-                    ToolTip="Record Screen &amp; Audio (MP4)"
-                    Command="{Binding ToggleRecordingCommand}"
-                    Background="{Binding RecordButtonBackground}">
+            <Button ToolTip="Record Screen &amp; Audio (MP4)"
+                    Command="{Binding ToggleRecordingCommand}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource FloatingVerticalBtn}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRecording}" Value="True">
+                                <Setter Property="Background" Value="#FF3B30" />
+                                <Setter Property="BorderBrush" Value="#FF453A" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
                 <Grid>
-                    <!-- Idle Record Icon -->
+                    <!-- Idle Record Icon (Clean Red Dot) -->
                     <Viewbox Width="14" Height="14" Visibility="{Binding IsRecording, Converter={StaticResource InverseBoolToVis}}">
                         <Canvas Width="16" Height="16">
                             <Ellipse Width="10" Height="10" Canvas.Left="3" Canvas.Top="3" Fill="#EF4444" />
@@ -197,7 +205,7 @@
                         </Canvas>
                     </Viewbox>
 
-                    <!-- Active Recording Square -->
+                    <!-- Active Recording Square (White Stop Symbol) -->
                     <Rectangle Width="9" Height="9" Fill="#FFFFFF" Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}" />
                 </Grid>
             </Button>

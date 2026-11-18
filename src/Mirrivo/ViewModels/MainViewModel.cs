@@ -152,6 +152,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isRecording = false;
 
+    private bool _isTransitioningRecording = false;
+
     [ObservableProperty]
     private string _recordingTimerText = "00:00";
 
@@ -384,18 +386,18 @@ public partial class MainViewModel : ObservableObject
             {
                 CurrentStreamFps = 0.0;
                 OnPropertyChanged(nameof(FpsDisplay));
-                if (IsRecording)
+                if (IsRecording && !_isTransitioningRecording)
                 {
                     _ = StopRecordingAsync();
                 }
-                if (_floatingBar != null && _floatingBar.IsLoaded)
+                if (!_isTransitioningRecording && _floatingBar != null && _floatingBar.IsLoaded)
                 {
                     _floatingBar.Close();
                     _floatingBar = null;
                     IsFloatingBarActive = false;
                 }
             }
-            else
+            else if (!_isTransitioningRecording)
             {
                 // Auto-open docked vertical companion bar attached to phone mirror window
                 OpenFloatingBar();
@@ -875,9 +877,17 @@ public partial class MainViewModel : ObservableObject
         // If stream is already active, restart seamlessly with record argument
         if (IsMirroringActive)
         {
-            _mirror.StopMirroring(SelectedDevice.Serial);
-            await Task.Delay(250);
-            await _mirror.StartMirroringAsync(SelectedDevice, Config);
+            _isTransitioningRecording = true;
+            try
+            {
+                _mirror.StopMirroring(SelectedDevice.Serial);
+                await Task.Delay(400);
+                await _mirror.StartMirroringAsync(SelectedDevice, Config);
+            }
+            finally
+            {
+                _isTransitioningRecording = false;
+            }
         }
         else
         {
@@ -898,22 +908,43 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(RecordButtonBackground));
         OnPropertyChanged(nameof(RecordButtonForeground));
 
-        Log($"[Recording] Saved recording to: {LastRecordingPath}", LogLevel.Success);
-        StatusText = $"Recording saved: {Path.GetFileName(LastRecordingPath)}";
-
         // Restart mirror session cleanly without record flag if still active
         if (SelectedDevice != null && IsMirroringActive)
         {
-            _mirror.StopMirroring(SelectedDevice.Serial);
-            await Task.Delay(250);
-            await _mirror.StartMirroringAsync(SelectedDevice, Config);
+            _isTransitioningRecording = true;
+            try
+            {
+                _mirror.StopMirroring(SelectedDevice.Serial);
+                await Task.Delay(400);
+                await _mirror.StartMirroringAsync(SelectedDevice, Config);
+            }
+            finally
+            {
+                _isTransitioningRecording = false;
+            }
         }
 
-        var res = MessageBox.Show($"Recording saved successfully!\n\nPath: {LastRecordingPath}\n\nWould you like to open the recording folder?", "MIRRIVO // Recording Saved", MessageBoxButton.YesNo, MessageBoxImage.Information);
-        if (res == MessageBoxResult.Yes)
+        // Verify that the file exists and is valid
+        if (File.Exists(LastRecordingPath))
         {
-            OpenRecordingsFolder();
+            var fileInfo = new FileInfo(LastRecordingPath);
+            if (fileInfo.Length > 0)
+            {
+                double sizeMb = fileInfo.Length / (1024.0 * 1024.0);
+                Log($"[Recording] Saved recording to: {LastRecordingPath} ({sizeMb:F2} MB)", LogLevel.Success);
+                StatusText = $"Recording saved: {Path.GetFileName(LastRecordingPath)} ({sizeMb:F1} MB)";
+
+                var res = MessageBox.Show($"Recording saved successfully!\n\nFile: {Path.GetFileName(LastRecordingPath)}\nSize: {sizeMb:F2} MB\n\nLocation:\n{LastRecordingPath}\n\nWould you like to open the recording folder?", "MIRRIVO // Recording Saved", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (res == MessageBoxResult.Yes)
+                {
+                    OpenRecordingsFolder();
+                }
+                return;
+            }
         }
+
+        Log($"[Recording] Session finished: {LastRecordingPath}", LogLevel.Info);
+        StatusText = "Recording session stopped";
     }
 
     [RelayCommand]

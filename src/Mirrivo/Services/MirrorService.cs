@@ -260,7 +260,8 @@ public class MirrorService
 
         if (config.RecordScreen && !string.IsNullOrWhiteSpace(config.RecordFilePath))
         {
-            argsList.Add($"--record \"{config.RecordFilePath}\"");
+            argsList.Add($"--record=\"{config.RecordFilePath}\"");
+            argsList.Add("--record-format=mp4");
         }
 
         string fullArgs = string.Join(" ", argsList);
@@ -377,7 +378,12 @@ public class MirrorService
             {
                 if (!proc.HasExited)
                 {
-                    proc.Kill();
+                    // 1. Try graceful window close so scrcpy finalizes video recording files
+                    proc.CloseMainWindow();
+                    if (!proc.WaitForExit(700))
+                    {
+                        proc.Kill();
+                    }
                 }
             }
             catch { }
