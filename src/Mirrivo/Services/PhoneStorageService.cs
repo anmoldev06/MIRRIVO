@@ -78,8 +78,28 @@ public class AdbStore : IStore
         return "/sdcard/" + rel;
     }
 
-    public string RunAdb(string args)
+    private void EnsureConnected()
     {
+        if (_serial.Contains(':'))
+        {
+            try
+            {
+                using var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = _adbPath,
+                    Arguments = $"connect {_serial}",
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                });
+                p?.WaitForExit(4000);
+            }
+            catch { }
+        }
+    }
+
+    private string ExecuteAdbProcess(string args, int timeoutMs, out string err)
+    {
+        err = string.Empty;
         try
         {
             using var p = new Process
@@ -95,15 +115,88 @@ public class AdbStore : IStore
                 }
             };
             p.Start();
-            string outStr = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(10000);
-            return outStr;
+            var outTask = p.StandardOutput.ReadToEndAsync();
+            var errTask = p.StandardError.ReadToEndAsync();
+            if (p.WaitForExit(timeoutMs))
+            {
+                Task.WaitAll(outTask, errTask);
+                err = errTask.Result;
+                return outTask.Result;
+            }
+            else
+            {
+                try { p.Kill(); } catch { }
+                return string.Empty;
+            }
         }
         catch (Exception ex)
         {
             Debug.WriteLine("AdbStore ADB error: " + ex.Message);
+            err = ex.Message;
             return string.Empty;
         }
+    }
+
+    public string RunAdb(string args, int timeoutMs = 15000)
+    {
+        string outStr = ExecuteAdbProcess(args, timeoutMs, out string err);
+        if (err.Contains("offline") || err.Contains("not found") || outStr.Contains("offline"))
+        {
+            EnsureConnected();
+            outStr = ExecuteAdbProcess(args, timeoutMs, out _);
+        }
+        return outStr;
+    }
+
+    private bool ExecuteAdbTransfer(string args, int timeoutMs, out string err)
+    {
+        err = string.Empty;
+        try
+        {
+            using var p = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _adbPath,
+                    Arguments = $"-s {_serial} {args}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                }
+            };
+            p.Start();
+            var outTask = p.StandardOutput.ReadToEndAsync();
+            var errTask = p.StandardError.ReadToEndAsync();
+            if (p.WaitForExit(timeoutMs))
+            {
+                Task.WaitAll(outTask, errTask);
+                err = errTask.Result;
+                return p.ExitCode == 0;
+            }
+            else
+            {
+                try { p.Kill(); } catch { }
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("AdbStore transfer error: " + ex.Message);
+            err = ex.Message;
+            return false;
+        }
+    }
+
+    public bool RunAdbTransfer(string args, int timeoutMs = 180000)
+    {
+        bool ok = ExecuteAdbTransfer(args, timeoutMs, out string err);
+        if (!ok && (err.Contains("offline") || err.Contains("not found")))
+        {
+            EnsureConnected();
+            ok = ExecuteAdbTransfer(args, timeoutMs, out _);
+        }
+        return ok;
     }
 
     public AdbEntryInfo? GetPathInfo(string fullPath)
@@ -281,30 +374,49 @@ public class AdbFile : IStoreItem
     public IPropertyManager PropertyManager { get; }
     public ILockingManager LockingManager => _store.LockingManager;
 
-    public async Task<Stream> GetReadableStreamAsync(IHttpContext httpContext)
+    public Task<Stream> GetReadableStreamAsync(IHttpContext httpContext)
     {
-        string localCacheFile = Path.Combine(_store.CacheDir, Guid.NewGuid().ToString("N") + "_" + _name);
-        _store.RunAdb($"pull \"{_fullPath}\" \"{localCacheFile}\"");
+        string safeFileName = string.Join("_", _name.Split(Path.GetInvalidFileNameChars()));
+        string localCacheFile = Path.Combine(_store.CacheDir, $"cache_{Math.Abs(_fullPath.GetHashCode())}_{safeFileName}");
 
-        if (File.Exists(localCacheFile))
+        bool needPull = !File.Exists(localCacheFile) || (Size > 0 && new FileInfo(localCacheFile).Length != Size);
+        if (needPull)
         {
-            return new FileStream(localCacheFile, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.DeleteOnClose);
+            bool ok = _store.RunAdbTransfer($"pull \"{_fullPath}\" \"{localCacheFile}\"", 180000);
+            if (!ok || !File.Exists(localCacheFile))
+            {
+                return Task.FromResult<Stream>(Stream.Null);
+            }
         }
-        return Stream.Null;
+
+        var stream = new FileStream(localCacheFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536);
+        return Task.FromResult<Stream>(stream);
     }
 
     public async Task<DavStatusCode> UploadFromStreamAsync(IHttpContext httpContext, Stream source)
     {
-        string localTempFile = Path.Combine(_store.CacheDir, "upload_" + Guid.NewGuid().ToString("N") + "_" + _name);
-        using (var fs = new FileStream(localTempFile, FileMode.Create, FileAccess.Write))
+        string safeFileName = string.Join("_", _name.Split(Path.GetInvalidFileNameChars()));
+        string localTempFile = Path.Combine(_store.CacheDir, $"upload_{Guid.NewGuid():N}_{safeFileName}");
+
+        try
         {
-            await source.CopyToAsync(fs);
+            using (var fs = new FileStream(localTempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await source.CopyToAsync(fs);
+            }
+
+            bool ok = _store.RunAdbTransfer($"push \"{localTempFile}\" \"{_fullPath}\"", 180000);
+            return ok ? DavStatusCode.Ok : DavStatusCode.InternalServerError;
         }
-
-        _store.RunAdb($"push \"{localTempFile}\" \"{_fullPath}\"");
-        try { File.Delete(localTempFile); } catch { }
-
-        return DavStatusCode.Created;
+        catch (Exception ex)
+        {
+            Debug.WriteLine("Upload error: " + ex.Message);
+            return DavStatusCode.InternalServerError;
+        }
+        finally
+        {
+            try { if (File.Exists(localTempFile)) File.Delete(localTempFile); } catch { }
+        }
     }
 
     public Task<StoreItemResult> CopyAsync(IStoreCollection destination, string name, bool overwrite, IHttpContext httpContext)
@@ -359,14 +471,12 @@ public class PhoneStorageService
 
     public async Task<bool> MountDriveAsync(string serial, string model)
     {
-        // If already mounted for this serial, just reveal in File Explorer
         if (IsMounted && MountedSerial == serial && MountedDriveLetter.HasValue)
         {
             OpenInExplorer();
             return true;
         }
 
-        // Clean up previous mount if any
         UnmountDrive();
 
         char? letter = GetNextAvailableDriveLetter();
@@ -377,10 +487,8 @@ public class PhoneStorageService
 
         try
         {
-            // Ensure BasicAuthLevel is configured for Windows WebClient
-            EnsureBasicAuthLevel();
+            EnsureWebClientSettings();
 
-            // Start WebDAV server
             var store = new AdbStore(serial, _engine.AdbPath);
             _dispatcher = new WebDavDispatcher(store, null);
 
@@ -392,11 +500,9 @@ public class PhoneStorageService
             _serverCts = new CancellationTokenSource();
             _ = RunServerLoopAsync(_listener, _dispatcher, _serverCts.Token);
 
-            // Mount network drive via net use
             string uncPath = $@"\\localhost@{ServerPort}\DavWWWRoot";
             await RunProcessAsync("cmd.exe", $"/c net use {letter.Value}: \"{uncPath}\" /persistent:no");
 
-            // Set Explorer Volume Label in registry
             try
             {
                 string regPath = $@"Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\##localhost@{ServerPort}#DavWWWRoot";
@@ -412,7 +518,6 @@ public class PhoneStorageService
 
             OnMountStateChanged?.Invoke(true);
 
-            // Open Windows File Explorer directly to the new drive
             OpenInExplorer();
 
             return true;
@@ -481,6 +586,62 @@ public class PhoneStorageService
         }
     }
 
+    public async Task<bool> PullFileDirectAsync(string remotePath, string localDestPath)
+    {
+        if (string.IsNullOrEmpty(MountedSerial)) return false;
+        return await Task.Run(() =>
+        {
+            try
+            {
+                using var p = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = _engine.AdbPath,
+                        Arguments = $"-s {MountedSerial} pull \"{remotePath}\" \"{localDestPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    }
+                };
+                p.Start();
+                p.StandardOutput.ReadToEndAsync();
+                p.StandardError.ReadToEndAsync();
+                return p.WaitForExit(180000) && p.ExitCode == 0;
+            }
+            catch { return false; }
+        });
+    }
+
+    public async Task<bool> PushFileDirectAsync(string localPath, string remoteDestPath)
+    {
+        if (string.IsNullOrEmpty(MountedSerial)) return false;
+        return await Task.Run(() =>
+        {
+            try
+            {
+                using var p = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = _engine.AdbPath,
+                        Arguments = $"-s {MountedSerial} push \"{localPath}\" \"{remoteDestPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    }
+                };
+                p.Start();
+                p.StandardOutput.ReadToEndAsync();
+                p.StandardError.ReadToEndAsync();
+                return p.WaitForExit(180000) && p.ExitCode == 0;
+            }
+            catch { return false; }
+        });
+    }
+
     private async Task RunServerLoopAsync(HttpListener listener, WebDavDispatcher dispatcher, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested && listener.IsListening)
@@ -512,17 +673,23 @@ public class PhoneStorageService
         }
     }
 
-    private static void EnsureBasicAuthLevel()
+    private static void EnsureWebClientSettings()
     {
         try
         {
             using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\WebClient\Parameters", true);
             if (key != null)
             {
-                var current = key.GetValue("BasicAuthLevel");
-                if (current == null || (int)current < 2)
+                var auth = key.GetValue("BasicAuthLevel");
+                if (auth == null || (int)auth < 2)
                 {
                     key.SetValue("BasicAuthLevel", 2, RegistryValueKind.DWord);
+                }
+
+                var sizeLimit = key.GetValue("FileSizeLimitInBytes");
+                if (sizeLimit == null || Convert.ToInt64(sizeLimit) < 4294967295)
+                {
+                    key.SetValue("FileSizeLimitInBytes", 4294967295, RegistryValueKind.DWord);
                 }
             }
         }
