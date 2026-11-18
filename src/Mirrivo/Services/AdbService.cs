@@ -582,6 +582,7 @@ public class AdbService
         { "com.whatsapp.w4b", ("WhatsApp Business", "Business", "💼", "#25D366") },
         { "com.instagram.android", ("Instagram", "Social", "📸", "#E1306C") },
         { "com.google.android.youtube", ("YouTube", "Video", "▶️", "#FF0000") },
+        { "com.google.android.apps.youtube.creator", ("YouTube Studio", "Creator & Video", "▶️", "#FF0000") },
         { "com.android.chrome", ("Google Chrome", "Browser", "🌐", "#4285F4") },
         { "org.telegram.messenger", ("Telegram", "Messaging", "✈️", "#0088CC") },
         { "com.snapchat.android", ("Snapchat", "Social", "👻", "#FFFC00") },
@@ -592,6 +593,12 @@ public class AdbService
         { "com.amazon.mShop.android.shopping", ("Amazon Shopping", "Shopping", "🛒", "#FF9900") },
         { "com.openai.chatgpt", ("ChatGPT", "AI Assistant", "🤖", "#10A37F") },
         { "com.google.android.apps.bard", ("Google Gemini", "AI Assistant", "✨", "#4285F4") },
+        { "com.google.android.apps.docs.editors.docs", ("Google Docs", "Productivity", "📄", "#4285F4") },
+        { "com.google.android.apps.docs.editors.sheets", ("Google Sheets", "Productivity", "📊", "#0F9D58") },
+        { "com.google.android.apps.docs.editors.slides", ("Google Slides", "Productivity", "📽️", "#F4B400") },
+        { "com.alibaba.intl.android.apps.poseidon", ("Alibaba.com", "Wholesale & Shopping", "📦", "#FF6A00") },
+        { "com.scanbridge.app", ("ScanBridge", "Scanner Utility", "📷", "#0071E3") },
+        { "in.gov.uidai.facerd", ("Aadhaar FaceRD", "Identity & Auth", "🪪", "#0088CC") },
         { "com.twitter.android", ("X (Twitter)", "Social", "✖️", "#1DA1F2") },
         { "com.reddit.frontpage", ("Reddit", "Community", "🤖", "#FF4500") },
         { "com.linkedin.android", ("LinkedIn", "Professional", "💼", "#0A66C2") },
@@ -600,11 +607,9 @@ public class AdbService
         { "com.google.android.gm", ("Gmail", "Mail", "✉️", "#EA4335") },
         { "com.google.android.apps.maps", ("Google Maps", "Navigation", "🗺️", "#34A853") },
         { "com.google.android.apps.photos", ("Google Photos", "Photos", "🖼️", "#4285F4") },
-        { "com.google.android.apps.docs", ("Google Docs", "Productivity", "📄", "#4285F4") },
         { "com.google.android.apps.translate", ("Google Translate", "Utility", "🔤", "#4285F4") },
         { "com.microsoft.office.officehubrow", ("Microsoft 365", "Office", "📊", "#D83B01") },
         { "com.microsoft.office.outlook", ("Microsoft Outlook", "Mail", "📨", "#0078D4") },
-        { "com.alibaba.intl.android.apps.poseidon", ("Alibaba.com", "Wholesale", "📦", "#FF6A00") },
         { "com.dji.mimo", ("DJI Mimo", "Camera / Drone", "🚁", "#000000") },
         { "com.activ.health", ("Activ Health", "Health & Fitness", "❤️", "#E60000") },
         { "com.brother.mfc.connect", ("Brother Mobile Connect", "Printer", "🖨️", "#003399") },
@@ -612,8 +617,31 @@ public class AdbService
         { "com.sec.android.app.camera", ("Samsung Camera", "Camera", "📷", "#000000") },
         { "com.sec.android.gallery3d", ("Samsung Gallery", "Photos", "🎨", "#E4405F") },
         { "com.sec.android.app.sbrowser", ("Samsung Internet", "Browser", "🧭", "#6B38FB") },
+        { "com.sec.android.app.myfiles", ("My Files", "File Manager", "📁", "#FF9900") },
+        { "com.sec.android.app.clockpackage", ("Clock", "Utility", "⏰", "#2C2C2E") },
+        { "com.sec.android.app.popupcalculator", ("Calculator", "Utility", "🔢", "#30D158") },
         { "com.android.settings", ("System Settings", "Settings", "⚙️", "#8E8E93") },
     };
+
+    public static bool IsKnownApp(string packageName) => KnownApps.ContainsKey(packageName);
+
+    private static bool IsJunkPackage(string pkg)
+    {
+        if (KnownApps.ContainsKey(pkg)) return false;
+        string p = pkg.ToLowerInvariant();
+        return p.Contains("bixby.ondevice") ||
+               p.Contains(".overlay") ||
+               p.Contains("contactkeys") ||
+               p.Contains(".cts.") ||
+               p.Contains(".test.") ||
+               p.Contains("syncadapter") ||
+               p.Contains("autofill") ||
+               p.EndsWith(".overlay") ||
+               p.StartsWith("com.android.internal") ||
+               p.StartsWith("com.samsung.android.rubin") ||
+               p.StartsWith("com.samsung.android.scs") ||
+               p.StartsWith("com.samsung.android.mcfds");
+    }
 
     public async Task<List<AppItem>> GetInstalledAppsAsync(string serial)
     {
@@ -633,44 +661,59 @@ public class AdbService
                 {
                     string pkg = line.Trim();
                     if (pkg.StartsWith("package:")) pkg = pkg.Substring("package:".Length).Trim();
-                    if (!string.IsNullOrEmpty(pkg)) thirdPartySet.Add(pkg);
+                    if (!string.IsNullOrEmpty(pkg) && !IsJunkPackage(pkg)) thirdPartySet.Add(pkg);
                 }
             }
 
-            // 2. Query launchable activities (user-facing apps)
-            var (c2, launchableOutput, _) = await RunAdbCommandAsync($"-s {serial} shell cmd package query-intent-activities -a android.intent.action.MAIN -c android.intent.category.LAUNCHER", 15000);
+            // 2. Query launchable activities (user-facing apps) via dumpsys package resolver table
+            var (c2, launchableOutput, _) = await RunAdbCommandAsync($"-s {serial} shell \"dumpsys package | grep -B 1 'android.intent.category.LAUNCHER'\"", 12000);
             if (c2 == 0 && !string.IsNullOrWhiteSpace(launchableOutput))
             {
                 foreach (var line in launchableOutput.Split('\n'))
                 {
-                    string trimmed = line.Trim();
-                    // Example format: "activity com.whatsapp/.Main" or "packageName=com.whatsapp"
-                    string pkg = "";
-                    if (trimmed.StartsWith("activity ", StringComparison.OrdinalIgnoreCase))
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"([a-zA-Z0-9_\.]+)/([a-zA-Z0-9_\.]+)");
+                    if (match.Success)
                     {
-                        var parts = trimmed.Substring("activity ".Length).Split('/');
-                        if (parts.Length > 0) pkg = parts[0].Trim();
-                    }
-                    else if (trimmed.Contains("packageName="))
-                    {
-                        int idx = trimmed.IndexOf("packageName=");
-                        int end = trimmed.IndexOfAny(new[] { ' ', ',', ';' }, idx);
-                        pkg = end > idx ? trimmed.Substring(idx + 12, end - idx - 12) : trimmed.Substring(idx + 12);
-                    }
-
-                    if (!string.IsNullOrEmpty(pkg) && !seenPackages.Contains(pkg))
-                    {
-                        seenPackages.Add(pkg);
-                        bool isThirdParty = thirdPartySet.Contains(pkg);
-                        appList.Add(CreateAppItem(pkg, !isThirdParty));
+                        string pkg = match.Groups[1].Value.Trim();
+                        string act = match.Groups[2].Value.Trim();
+                        if (!IsJunkPackage(pkg) && !seenPackages.Contains(pkg))
+                        {
+                            seenPackages.Add(pkg);
+                            bool isThirdParty = thirdPartySet.Contains(pkg);
+                            appList.Add(CreateAppItem(pkg, !isThirdParty, $"{pkg}/{act}"));
+                        }
                     }
                 }
             }
 
-            // 3. Add any remaining 3rd-party user packages that didn't have explicit launcher activities
+            // Fallback: If dumpsys grep returned few apps, query pm query-activities
+            if (appList.Count < 5)
+            {
+                var (c3, pmOutput, _) = await RunAdbCommandAsync($"-s {serial} shell \"pm query-activities -a android.intent.action.MAIN -c android.intent.category.LAUNCHER\"", 8000);
+                if (c3 == 0 && !string.IsNullOrWhiteSpace(pmOutput))
+                {
+                    foreach (var line in pmOutput.Split('\n'))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(line, @"([a-zA-Z0-9_\.]+)/([a-zA-Z0-9_\.]+)");
+                        if (match.Success)
+                        {
+                            string pkg = match.Groups[1].Value.Trim();
+                            string act = match.Groups[2].Value.Trim();
+                            if (!IsJunkPackage(pkg) && !seenPackages.Contains(pkg))
+                            {
+                                seenPackages.Add(pkg);
+                                bool isThirdParty = thirdPartySet.Contains(pkg);
+                                appList.Add(CreateAppItem(pkg, !isThirdParty, $"{pkg}/{act}"));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Add any valid remaining 3rd-party user packages
             foreach (var pkg in thirdPartySet)
             {
-                if (!seenPackages.Contains(pkg))
+                if (!IsJunkPackage(pkg) && !seenPackages.Contains(pkg))
                 {
                     seenPackages.Add(pkg);
                     appList.Add(CreateAppItem(pkg, false));
@@ -683,7 +726,7 @@ public class AdbService
                 .ThenBy(a => a.DisplayName)
                 .ToList();
 
-            Log($"Discovered {appList.Count} installed applications on {serial}", LogLevel.Success);
+            Log($"Discovered {appList.Count} installed user-accessible applications on {serial}", LogLevel.Success);
         }
         catch (Exception ex)
         {
@@ -693,7 +736,7 @@ public class AdbService
         return appList;
     }
 
-    private AppItem CreateAppItem(string packageName, bool isSystem)
+    private AppItem CreateAppItem(string packageName, bool isSystem, string? mainActivity = null)
     {
         string name;
         string cat = "App";
@@ -723,14 +766,18 @@ public class AdbService
             else if (packageName.Contains("health", StringComparison.OrdinalIgnoreCase) || packageName.Contains("fit", StringComparison.OrdinalIgnoreCase)) { cat = "Health"; icon = "❤️"; color = "#FF2D55"; }
         }
 
+        string? cachedIcon = AppIconService.Instance.GetCachedIconPath(packageName);
+
         return new AppItem
         {
             PackageName = packageName,
             DisplayName = name,
+            MainActivity = mainActivity ?? "",
             Category = cat,
             IsSystemApp = isSystem,
             IconGlyph = icon,
-            IconColor = color
+            IconColor = color,
+            IconPath = cachedIcon
         };
     }
 
@@ -793,10 +840,23 @@ public class AdbService
         return (true, "App stopped");
     }
 
-    public async Task<(bool Success, string Message)> LaunchAppOnPhoneAsync(string serial, string packageName)
+    public async Task<(bool Success, string Message)> LaunchAppOnPhoneAsync(string serial, string packageName, string? mainActivity = null)
     {
         Log($"Launching {packageName} on phone display...", LogLevel.Command);
-        var (code, output, error) = await RunAdbCommandAsync($"-s {serial} shell monkey -p {packageName} -c android.intent.category.LAUNCHER 1");
+        int code;
+        string output, error;
+
+        if (!string.IsNullOrWhiteSpace(mainActivity))
+        {
+            (code, output, error) = await RunAdbCommandAsync($"-s {serial} shell am start -n {mainActivity}");
+            if (code == 0)
+            {
+                Log($"Opened {packageName} on phone screen", LogLevel.Success);
+                return (true, "Opened on phone screen");
+            }
+        }
+
+        (code, output, error) = await RunAdbCommandAsync($"-s {serial} shell monkey -p {packageName} -c android.intent.category.LAUNCHER 1");
         if (code == 0)
         {
             Log($"Opened {packageName} on phone screen", LogLevel.Success);

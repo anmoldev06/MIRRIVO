@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.IO;
 
 namespace Mirrivo.Models;
 
@@ -9,6 +10,9 @@ public partial class AppItem : ObservableObject
 
     [ObservableProperty]
     private string _displayName = string.Empty;
+
+    [ObservableProperty]
+    private string _mainActivity = string.Empty;
 
     [ObservableProperty]
     private string _versionName = string.Empty;
@@ -24,6 +28,17 @@ public partial class AppItem : ObservableObject
 
     [ObservableProperty]
     private string _iconGlyph = "📱";
+
+    [ObservableProperty]
+    private string? _iconPath = null;
+
+    [ObservableProperty]
+    private bool _hasCustomIcon = false;
+
+    partial void OnIconPathChanged(string? value)
+    {
+        HasCustomIcon = !string.IsNullOrEmpty(value) && File.Exists(value);
+    }
 
     public string Initials
     {

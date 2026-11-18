@@ -418,7 +418,7 @@ public class MirrorService
     // ==============================================
     private readonly List<Process> _ghostSessions = new();
 
-    public async Task<bool> LaunchAppInGhostDisplayAsync(DeviceItem device, string packageName, string displayName)
+    public async Task<bool> LaunchAppInGhostDisplayAsync(DeviceItem device, string packageName, string displayName, string? mainActivity = null)
     {
         if (device == null || string.IsNullOrWhiteSpace(packageName)) return false;
 
@@ -426,12 +426,13 @@ public class MirrorService
         var argsList = new List<string>
         {
             $"-s {device.Serial}",
-            "--new-display=1080x1920/400",
-            "-x", // flex-display: auto-resize virtual display with window
-            $"--start-app=+{packageName}",
+            "--new-display=1080x2160/400",
+            "--no-vd-system-decorations",
+            $"--start-app={packageName}",
             $"--window-title=\"{title}\"",
             "--video-bit-rate=8M",
-            "--max-fps=60"
+            "--max-fps=60",
+            "--stay-awake"
         };
 
         string fullArgs = string.Join(" ", argsList);
@@ -489,6 +490,20 @@ public class MirrorService
                     _ghostSessions.Add(process);
                 }
                 Log($"Ghost Display launched for '{displayName}'! Independent window opened on PC.", LogLevel.Success);
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    if (!string.IsNullOrWhiteSpace(mainActivity))
+                    {
+                        await AdbService.Instance.RunAdbCommandAsync($"-s {device.Serial} shell am start -n {mainActivity}");
+                    }
+                    else
+                    {
+                        await AdbService.Instance.RunAdbCommandAsync($"-s {device.Serial} shell monkey -p {packageName} -c android.intent.category.LAUNCHER 1");
+                    }
+                });
+
                 return true;
             }
         }

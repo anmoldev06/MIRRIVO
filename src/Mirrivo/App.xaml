@@ -22,6 +22,8 @@
             <converters:StringEqualsToBrushConverter x:Key="NavTabActiveForeground" ActiveBrush="#1D1D1F" InactiveBrush="#6E6E73" />
             <converters:StringEqualsToBrushConverter x:Key="FilterPillActiveBackground" ActiveBrush="#0071E3" InactiveBrush="#E8E8ED" />
             <converters:StringEqualsToBrushConverter x:Key="FilterPillActiveForeground" ActiveBrush="#FFFFFF" InactiveBrush="#1D1D1F" />
+            <converters:StringEqualsToBrushConverter x:Key="ViewModeActiveBackground" ActiveBrush="#FFFFFF" InactiveBrush="Transparent" />
+            <converters:StringEqualsToBrushConverter x:Key="ViewModeActiveForeground" ActiveBrush="#1D1D1F" InactiveBrush="#6E6E73" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

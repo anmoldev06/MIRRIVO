@@ -144,6 +144,15 @@ public partial class MainViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    private string _appsViewMode = "Grid"; // "Grid" or "List"
+
+    [RelayCommand]
+    public void SetAppsViewMode(string mode)
+    {
+        AppsViewMode = mode;
+    }
+
+    [ObservableProperty]
     private bool _isLoadingApps = false;
 
     [ObservableProperty]
@@ -209,6 +218,43 @@ public partial class MainViewModel : ObservableObject
                 ApplyAppsFilter();
                 StatusText = $"{TotalAppsCount} apps loaded ({UserAppsCount} user apps)";
             });
+
+            // Stream real app icons and verified names in the background
+            _ = Task.Run(async () =>
+            {
+                string devSerial = SelectedDevice?.Serial ?? "";
+                foreach (var app in apps)
+                {
+                    try
+                    {
+                        if (string.IsNullOrEmpty(app.IconPath))
+                        {
+                            string? iconPath = await AppIconService.Instance.GetOrFetchIconAsync(devSerial, app.PackageName);
+                            if (!string.IsNullOrEmpty(iconPath))
+                            {
+                                Application.Current?.Dispatcher?.Invoke(() =>
+                                {
+                                    app.IconPath = iconPath;
+                                });
+                            }
+                        }
+
+                        // If not known and has default humanized name, fetch verified title
+                        if (!AdbService.IsKnownApp(app.PackageName))
+                        {
+                            string? playTitle = await AppIconService.Instance.FetchPlayStoreTitleAsync(app.PackageName);
+                            if (!string.IsNullOrEmpty(playTitle))
+                            {
+                                Application.Current?.Dispatcher?.Invoke(() =>
+                                {
+                                    app.DisplayName = playTitle;
+                                });
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -233,7 +279,7 @@ public partial class MainViewModel : ObservableObject
         Log($"Launching '{app.DisplayName}' on PC in independent Ghost / Dual Virtual Display...", LogLevel.Command);
         StatusText = $"Opening {app.DisplayName} on PC in Dual Display...";
 
-        bool ok = await _mirror.LaunchAppInGhostDisplayAsync(SelectedDevice, app.PackageName, app.DisplayName);
+        bool ok = await _mirror.LaunchAppInGhostDisplayAsync(SelectedDevice, app.PackageName, app.DisplayName, app.MainActivity);
         if (ok)
         {
             StatusText = $"Dual Display active: {app.DisplayName}";
@@ -249,7 +295,8 @@ public partial class MainViewModel : ObservableObject
     public async Task OpenOnPhoneAsync(AppItem? app)
     {
         if (app == null || SelectedDevice == null) return;
-        await _adb.LaunchAppOnPhoneAsync(SelectedDevice.Serial, app.PackageName);
+        StatusText = $"Launching {app.DisplayName} on phone...";
+        await _adb.LaunchAppOnPhoneAsync(SelectedDevice.Serial, app.PackageName, app.MainActivity);
     }
 
     [RelayCommand]
