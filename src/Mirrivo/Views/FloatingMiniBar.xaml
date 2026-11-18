@@ -1,0 +1,146 @@
+<Window x:Class="Mirrivo.Views.FloatingMiniBar"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MIRRIVO Quick Bar"
+        Height="46" Width="470"
+        WindowStartupLocation="Manual"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        MouseDown="Window_MouseDown">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/GeistTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Floating Action Button Style -->
+            <Style x:Key="FloatingBtn" TargetType="Button">
+                <Setter Property="Background" Value="#1A1A1A" />
+                <Setter Property="Foreground" Value="#EDEDED" />
+                <Setter Property="BorderBrush" Value="#2D2D2D" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="FontFamily" Value="{StaticResource FontSans}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Width" Value="34" />
+                <Setter Property="Margin" Value="2,0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="btnBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="btnBorder" Property="Background" Value="#2A2A2A" />
+                                    <Setter TargetName="btnBorder" Property="BorderBrush" Value="#444444" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="btnBorder" Property="Background" Value="#101010" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="btnBorder" Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <!-- Floating Pill Body -->
+    <Border Background="#121212"
+            BorderBrush="{StaticResource BrushHairlineLight}"
+            BorderThickness="1"
+            CornerRadius="23"
+            Padding="8,4"
+            Margin="2">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.7" />
+        </Border.Effect>
+
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" /> <!-- Grip Handle -->
+                <ColumnDefinition Width="*" />    <!-- Action Buttons -->
+                <ColumnDefinition Width="Auto" /> <!-- Close -->
+            </Grid.ColumnDefinitions>
+
+            <!-- 1. Drag Grip -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,8,0" Cursor="SizeAll">
+                <TextBlock Text="⋮⋮" FontFamily="{StaticResource FontMono}" FontSize="14" Foreground="{StaticResource BrushMute}" VerticalAlignment="Center" />
+                <Border Width="6" Height="6" CornerRadius="3" Background="#0070F3" Margin="4,0,0,0" VerticalAlignment="Center" ToolTip="MIRRIVO Floating Bar" />
+            </StackPanel>
+
+            <!-- 2. Remote Buttons & Actions -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="⮌" Style="{StaticResource FloatingBtn}" ToolTip="Back (Esc)" Command="{Binding SendKeyCommand}" CommandParameter="Back" />
+                <Button Content="○" Style="{StaticResource FloatingBtn}" ToolTip="Home" Command="{Binding SendKeyCommand}" CommandParameter="Home" />
+                <Button Content="□" Style="{StaticResource FloatingBtn}" ToolTip="Recent Apps" Command="{Binding SendKeyCommand}" CommandParameter="AppSwitch" />
+                <Button Content="⏻" Style="{StaticResource FloatingBtn}" ToolTip="Power" Command="{Binding SendKeyCommand}" CommandParameter="Power" />
+                
+                <!-- Separator -->
+                <Rectangle Width="1" Height="20" Fill="#262626" Margin="4,0" />
+
+                <!-- Screenshot -->
+                <Button Content="📷" Style="{StaticResource FloatingBtn}" ToolTip="Take Screenshot" Command="{Binding TakeScreenshotCommand}" />
+
+                <!-- Screen Recording Button (Dynamic Red when active) -->
+                <Button Style="{StaticResource FloatingBtn}"
+                        ToolTip="Record Screen &amp; Audio (MP4)"
+                        Command="{Binding ToggleRecordingCommand}"
+                        Background="{Binding RecordButtonBackground}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="⏺" FontSize="11" Foreground="{Binding RecordButtonForeground}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding RecordingTimerText}"
+                                   FontFamily="{StaticResource FontMono}"
+                                   FontSize="8"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding RecordButtonForeground}"
+                                   Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}"
+                                   Margin="2,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Screen Off Toggle -->
+                <Button Style="{StaticResource FloatingBtn}"
+                        ToolTip="Toggle Phone Display Off / On"
+                        Command="{Binding TogglePhoneDisplayCommand}">
+                    <TextBlock Text="🌙" FontSize="11" VerticalAlignment="Center" />
+                </Button>
+
+                <!-- Clipboard Sync -->
+                <Button Content="📋" Style="{StaticResource FloatingBtn}" ToolTip="Sync Clipboard (PC ⇄ Phone)" Command="{Binding SyncClipboardCommand}" />
+
+                <!-- Volume Up/Down -->
+                <Button Content="＋" Style="{StaticResource FloatingBtn}" Width="28" ToolTip="Volume Up" Command="{Binding SendKeyCommand}" CommandParameter="VolUp" />
+                <Button Content="－" Style="{StaticResource FloatingBtn}" Width="28" ToolTip="Volume Down" Command="{Binding SendKeyCommand}" CommandParameter="VolDown" />
+            </StackPanel>
+
+            <!-- 3. Close Button -->
+            <Button Grid.Column="2"
+                    Content="✕"
+                    Style="{StaticResource FloatingBtn}"
+                    Width="26" Height="26"
+                    FontSize="10"
+                    Foreground="{StaticResource BrushMute}"
+                    Margin="4,0,2,0"
+                    ToolTip="Hide Floating Bar"
+                    Click="Close_Click" />
+        </Grid>
+    </Border>
+</Window>

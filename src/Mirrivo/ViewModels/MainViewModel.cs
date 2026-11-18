@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -136,6 +137,70 @@ public partial class MainViewModel : ObservableObject
             Log("File upload cancelled by user.", LogLevel.Warning);
         }
     }
+
+    // Screen Recording State
+    [ObservableProperty]
+    private bool _isRecording = false;
+
+    [ObservableProperty]
+    private string _recordingTimerText = "00:00";
+
+    [ObservableProperty]
+    private string _lastRecordingPath = "";
+
+    public string RecordButtonText => IsRecording ? $"⏹ STOP ({RecordingTimerText})" : "⏺ RECORD";
+    public string RecordButtonBackground => IsRecording ? "#DC2626" : "#171717";
+    public string RecordButtonForeground => IsRecording ? "#FFFFFF" : "#EDEDED";
+
+    private DispatcherTimer? _recordingTimer;
+    private DateTime _recordingStartTime;
+
+    // Clipboard Auto-Sync
+    [ObservableProperty]
+    private bool _clipboardAutoSync = true;
+
+    partial void OnClipboardAutoSyncChanged(bool value)
+    {
+        Config.ClipboardAutoSync = value;
+        Log($"Clipboard auto-sync set to {(value ? "ENABLED" : "DISABLED")}.", LogLevel.Info);
+    }
+
+    // Audio Routing Options
+    public List<string> AudioRoutingOptions { get; } = new()
+    {
+        "Media Audio (PC Speakers)",
+        "Phone Microphone (Mic ➔ PC)",
+        "Mute Stream (Video Only)"
+    };
+
+    [ObservableProperty]
+    private string _selectedAudioRouting = "Media Audio (PC Speakers)";
+
+    partial void OnSelectedAudioRoutingChanged(string value)
+    {
+        Config.AudioRoutingMode = value;
+        Config.ForwardAudio = value != "Mute Stream (Video Only)";
+        Log($"Audio routing set to: {value}", LogLevel.Info);
+
+        if (SelectedDevice != null && IsMirroringActive)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    _mirror.StopMirroring(SelectedDevice.Serial);
+                    await Task.Delay(250);
+                    await _mirror.StartMirroringAsync(SelectedDevice, Config);
+                });
+            });
+        }
+    }
+
+    // Floating Mini-Bar
+    private FloatingMiniBar? _floatingBar;
+
+    [ObservableProperty]
+    private bool _isFloatingBarActive = false;
 
     // Mirroring State & Button Bindings
     public bool HasSelectedDevice => SelectedDevice != null;
@@ -289,6 +354,10 @@ public partial class MainViewModel : ObservableObject
             {
                 CurrentStreamFps = 0.0;
                 OnPropertyChanged(nameof(FpsDisplay));
+                if (IsRecording)
+                {
+                    _ = StopRecordingAsync();
+                }
             }
             NotifyMirrorButtonState();
         });
@@ -618,6 +687,202 @@ public partial class MainViewModel : ObservableObject
         {
             StatusText = "Screenshot failed";
             MessageBox.Show($"Screenshot failed: {path}", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public async Task ToggleRecordingAsync()
+    {
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Please connect and select an Android phone first.", "MIRRIVO // Recording", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (IsRecording)
+        {
+            await StopRecordingAsync();
+        }
+        else
+        {
+            await StartRecordingAsync();
+        }
+    }
+
+    public async Task StartRecordingAsync()
+    {
+        if (SelectedDevice == null) return;
+
+        string videosFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "MIRRIVO");
+        Directory.CreateDirectory(videosFolder);
+
+        string fileName = $"MIRRIVO_Recording_{DateTime.Now:yyyyMMdd_HHmmss}.mp4";
+        string filePath = Path.Combine(videosFolder, fileName);
+        LastRecordingPath = filePath;
+
+        Config.RecordScreen = true;
+        Config.RecordFilePath = filePath;
+
+        IsRecording = true;
+        _recordingStartTime = DateTime.Now;
+        RecordingTimerText = "00:00";
+
+        _recordingTimer?.Stop();
+        _recordingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _recordingTimer.Tick += (s, e) =>
+        {
+            var elapsed = DateTime.Now - _recordingStartTime;
+            RecordingTimerText = $"{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+            OnPropertyChanged(nameof(RecordButtonText));
+        };
+        _recordingTimer.Start();
+
+        OnPropertyChanged(nameof(RecordButtonText));
+        OnPropertyChanged(nameof(RecordButtonBackground));
+        OnPropertyChanged(nameof(RecordButtonForeground));
+
+        Log($"[Recording] Started screen & audio recording: {fileName}", LogLevel.Success);
+        StatusText = $"Recording active: {fileName}";
+
+        // If stream is already active, restart seamlessly with record argument
+        if (IsMirroringActive)
+        {
+            _mirror.StopMirroring(SelectedDevice.Serial);
+            await Task.Delay(250);
+            await _mirror.StartMirroringAsync(SelectedDevice, Config);
+        }
+        else
+        {
+            await StartMirrorAsync(SelectedDevice);
+        }
+    }
+
+    public async Task StopRecordingAsync()
+    {
+        if (!IsRecording) return;
+
+        _recordingTimer?.Stop();
+        _recordingTimer = null;
+        IsRecording = false;
+        Config.RecordScreen = false;
+
+        OnPropertyChanged(nameof(RecordButtonText));
+        OnPropertyChanged(nameof(RecordButtonBackground));
+        OnPropertyChanged(nameof(RecordButtonForeground));
+
+        Log($"[Recording] Saved recording to: {LastRecordingPath}", LogLevel.Success);
+        StatusText = $"Recording saved: {Path.GetFileName(LastRecordingPath)}";
+
+        // Restart mirror session cleanly without record flag if still active
+        if (SelectedDevice != null && IsMirroringActive)
+        {
+            _mirror.StopMirroring(SelectedDevice.Serial);
+            await Task.Delay(250);
+            await _mirror.StartMirroringAsync(SelectedDevice, Config);
+        }
+
+        var res = MessageBox.Show($"Recording saved successfully!\n\nPath: {LastRecordingPath}\n\nWould you like to open the recording folder?", "MIRRIVO // Recording Saved", MessageBoxButton.YesNo, MessageBoxImage.Information);
+        if (res == MessageBoxResult.Yes)
+        {
+            OpenRecordingsFolder();
+        }
+    }
+
+    [RelayCommand]
+    public void OpenRecordingsFolder()
+    {
+        try
+        {
+            string videosFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "MIRRIVO");
+            Directory.CreateDirectory(videosFolder);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"\"{videosFolder}\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to open recordings folder: {ex.Message}", LogLevel.Warning);
+        }
+    }
+
+    [RelayCommand]
+    public async Task SyncClipboardAsync()
+    {
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Please connect a device first.", "MIRRIVO", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            string pcText = Clipboard.ContainsText() ? Clipboard.GetText() : "";
+            if (!string.IsNullOrEmpty(pcText))
+            {
+                bool ok = await _adb.SetDeviceClipboardAsync(SelectedDevice.Serial, pcText);
+                if (ok)
+                {
+                    StatusText = "Pushed PC clipboard to phone!";
+                    string preview = pcText.Length > 30 ? pcText.Substring(0, 30) + "..." : pcText;
+                    Log($"[Clipboard] Sent PC text to phone: \"{preview}\"", LogLevel.Success);
+                }
+            }
+            else
+            {
+                var (ok, phoneText) = await _adb.GetDeviceClipboardAsync(SelectedDevice.Serial);
+                if (ok && !string.IsNullOrEmpty(phoneText))
+                {
+                    Clipboard.SetText(phoneText);
+                    StatusText = "Received phone clipboard on PC!";
+                    string preview = phoneText.Length > 30 ? phoneText.Substring(0, 30) + "..." : phoneText;
+                    Log($"[Clipboard] Received phone text to PC: \"{preview}\"", LogLevel.Success);
+                }
+                else
+                {
+                    StatusText = "Clipboard is empty on both PC and phone.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Clipboard sync error: {ex.Message}", LogLevel.Warning);
+        }
+    }
+
+    [RelayCommand]
+    public void TogglePhoneDisplay()
+    {
+        TurnScreenOff = !TurnScreenOff;
+    }
+
+    [RelayCommand]
+    public void ToggleFloatingBar()
+    {
+        if (_floatingBar != null && _floatingBar.IsLoaded)
+        {
+            _floatingBar.Close();
+            _floatingBar = null;
+            IsFloatingBarActive = false;
+            Log("Floating Quick Control Bar closed.", LogLevel.Info);
+        }
+        else
+        {
+            _floatingBar = new FloatingMiniBar
+            {
+                DataContext = this,
+                Owner = Application.Current?.MainWindow
+            };
+            _floatingBar.Closed += (s, e) =>
+            {
+                _floatingBar = null;
+                IsFloatingBarActive = false;
+            };
+            _floatingBar.Show();
+            IsFloatingBarActive = true;
+            Log("Floating Quick Control Bar opened on screen.", LogLevel.Success);
         }
     }
 

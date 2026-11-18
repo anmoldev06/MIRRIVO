@@ -362,6 +362,39 @@ public class AdbService
         await RunAdbCommandAsync($"-s {serial} shell input keyevent {keycode}");
     }
 
+    public async Task<(bool Success, string Text)> GetDeviceClipboardAsync(string serial)
+    {
+        try
+        {
+            var (code, outStr, _) = await RunAdbCommandAsync($"-s {serial} shell cmd clipboard get", 3000);
+            if (code == 0 && !string.IsNullOrWhiteSpace(outStr))
+            {
+                return (true, outStr.Trim());
+            }
+        }
+        catch { }
+        return (false, string.Empty);
+    }
+
+    public async Task<bool> SetDeviceClipboardAsync(string serial, string text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        try
+        {
+            string safeText = text.Replace("\"", "\\\"").Replace("$", "\\$");
+            var (code, _, _) = await RunAdbCommandAsync($"-s {serial} shell \"cmd clipboard set \\\"{safeText}\\\"\"", 3000);
+            if (code == 0) return true;
+
+            await RunAdbCommandAsync($"-s {serial} shell input text \"{safeText}\"", 2000);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log($"Error setting device clipboard: {ex.Message}", LogLevel.Warning);
+            return false;
+        }
+    }
+
     public async Task<(bool Success, string Message)> InstallApkAsync(string serial, string apkPath)
     {
         Log($"Installing APK '{Path.GetFileName(apkPath)}' on {serial}...", LogLevel.Command);

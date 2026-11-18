@@ -174,9 +174,28 @@ public class MirrorService
             argsList.Add("--stay-awake");
         }
 
-        if (!config.ForwardAudio)
+        // Audio Routing Configuration
+        if (!config.ForwardAudio || config.AudioRoutingMode == "Mute Stream (Video Only)")
         {
             argsList.Add("--no-audio");
+        }
+        else if (config.AudioRoutingMode.Contains("Microphone"))
+        {
+            argsList.Add("--audio-source=mic");
+            argsList.Add("--audio-codec=opus");
+            argsList.Add("--audio-buffer=30");
+        }
+        else
+        {
+            argsList.Add("--audio-source=playback");
+            argsList.Add("--audio-codec=opus");
+            argsList.Add("--audio-buffer=30");
+        }
+
+        // Clipboard Auto-Sync
+        if (!config.ClipboardAutoSync)
+        {
+            argsList.Add("--no-clipboard-autosync");
         }
 
         // Note: We don't pass --always-on-top CLI flag to Scrcpy directly,

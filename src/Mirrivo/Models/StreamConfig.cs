@@ -16,6 +16,8 @@ public class StreamConfig
     public bool NeverTimeout { get; set; } = true;
     public bool ShowFps { get; set; } = false;
     public bool ForwardAudio { get; set; } = true;
+    public string AudioRoutingMode { get; set; } = "Media Audio (PC Speakers)";
+    public bool ClipboardAutoSync { get; set; } = true;
     public bool ShowTouches { get; set; } = false;
     public bool AlwaysOnTop { get; set; } = true;
     public bool Fullscreen { get; set; } = false;

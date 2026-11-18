@@ -118,6 +118,12 @@
                             Command="{Binding ToggleConsoleCommand}"
                             Margin="0,0,8,0" />
 
+                    <Button Content="🪟 Quick Bar"
+                            Style="{StaticResource GeistButtonSquare}"
+                            Command="{Binding ToggleFloatingBarCommand}"
+                            ToolTip="Open Draggable Floating Control Bar"
+                            Margin="0,0,8,0" />
+
                     <Button Content="★ Update"
                             Style="{StaticResource GeistButtonSquare}"
                             Command="{Binding CheckForUpdatesCommand}"
@@ -393,8 +399,16 @@
                                         <Border Background="#0C2038" BorderBrush="#0070F3" BorderThickness="1" CornerRadius="6" Padding="10,3" Margin="0,0,6,0">
                                             <TextBlock Text="{Binding FpsDisplay}" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushBlue}" />
                                         </Border>
-                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="10,3">
+                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="10,3" Margin="0,0,6,0">
                                             <TextBlock Text="{Binding SelectedResolution}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushBody}" />
+                                        </Border>
+                                        <!-- Active Recording Indicator -->
+                                        <Border Background="#2B0000" BorderBrush="#DC2626" BorderThickness="1" CornerRadius="6" Padding="10,3"
+                                                Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="6" Height="6" Fill="#DC2626" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding RecordingTimerText, StringFormat='REC {0}'}" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF" />
+                                            </StackPanel>
                                         </Border>
                                     </StackPanel>
                                 </StackPanel>
@@ -614,7 +628,7 @@
                                            Foreground="{StaticResource BrushMute}"
                                            Margin="0,0,0,12" />
 
-                                <UniformGrid Columns="4" Rows="2" Margin="0,0,0,0" IsEnabled="{Binding HasSelectedDevice}">
+                                <UniformGrid Columns="4" Rows="3" Margin="0,0,0,0" IsEnabled="{Binding HasSelectedDevice}">
                                     <Button Content="⮌ Back" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
                                             Command="{Binding SendKeyCommand}" CommandParameter="Back" />
                                     <Button Content="○ Home" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
@@ -632,6 +646,29 @@
                                             Command="{Binding TakeScreenshotCommand}" />
                                     <Button Content="⏹ Stop" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
                                             Command="{Binding StopMirrorCommand}" />
+
+                                    <!-- Screen Recording Button with Dynamic Timer -->
+                                    <Button Content="{Binding RecordButtonText}"
+                                            Background="{Binding RecordButtonBackground}"
+                                            Foreground="{Binding RecordButtonForeground}"
+                                            Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
+                                            ToolTip="Record screen and phone audio to MP4"
+                                            Command="{Binding ToggleRecordingCommand}" />
+
+                                    <!-- Clipboard Sync -->
+                                    <Button Content="📋 Sync Clip" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
+                                            ToolTip="Sync clipboard text between PC and Phone"
+                                            Command="{Binding SyncClipboardCommand}" />
+
+                                    <!-- Screen Off Toggle -->
+                                    <Button Content="🌙 Screen Off" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
+                                            ToolTip="Toggle phone display on/off while mirroring"
+                                            Command="{Binding TogglePhoneDisplayCommand}" />
+
+                                    <!-- Floating Bar Overlay -->
+                                    <Button Content="🪟 Mini Bar" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
+                                            ToolTip="Open Draggable Floating Control Bar"
+                                            Command="{Binding ToggleFloatingBarCommand}" />
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
@@ -676,6 +713,13 @@
                                 <TextBlock Text="FRAME RATE" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
                                 <ComboBox ItemsSource="{Binding FpsOptions}"
                                           SelectedItem="{Binding SelectedFps}"
+                                          Style="{StaticResource GeistComboBox}"
+                                          Margin="0,0,0,12" />
+
+                                <!-- Audio Routing -->
+                                <TextBlock Text="AUDIO ROUTING" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushMute}" Margin="0,0,0,5" />
+                                <ComboBox ItemsSource="{Binding AudioRoutingOptions}"
+                                          SelectedItem="{Binding SelectedAudioRouting}"
                                           Style="{StaticResource GeistComboBox}" />
                             </StackPanel>
                         </Border>
@@ -693,6 +737,11 @@
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushMute}"
                                            Margin="0,0,0,10" />
+
+                                <!-- Clipboard Auto-Sync (PC ⇄ Phone) -->
+                                <CheckBox Content="Clipboard Auto-Sync (PC ⇄ Phone)"
+                                          IsChecked="{Binding ClipboardAutoSync}"
+                                          Style="{StaticResource GeistToggleSwitch}" />
 
                                 <!-- Keep Mirror Window Always On Top (Real-Time Live Win32) -->
                                 <CheckBox Content="Keep mirror window always on top"
