@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -13,7 +14,7 @@ public class MirrorService
     public static MirrorService Instance => _instance.Value;
 
     private readonly EngineService _engine = EngineService.Instance;
-    private readonly Dictionary<string, Process> _activeSessions = new();
+    private readonly ConcurrentDictionary<string, Process> _activeSessions = new();
 
     public event Action<string, bool>? OnMirrorStateChanged;
     public event Action<string, double>? OnFpsUpdated;
@@ -252,12 +253,13 @@ public class MirrorService
 
             process.Exited += async (s, e) =>
             {
-                _activeSessions.Remove(device.Serial);
-                OnMirrorStateChanged?.Invoke(device.Serial, false);
-                OnFpsUpdated?.Invoke(device.Serial, 0.0);
-                Log($"Mirror session ended for {device.Model} ({device.Serial})", LogLevel.Info);
-
-                await AdbService.Instance.RestoreScreenAwakeAsync(device.Serial);
+                if (_activeSessions.TryRemove(device.Serial, out _))
+                {
+                    OnMirrorStateChanged?.Invoke(device.Serial, false);
+                    OnFpsUpdated?.Invoke(device.Serial, 0.0);
+                    Log($"Mirror session ended for {device.Model} ({device.Serial})", LogLevel.Info);
+                    await AdbService.Instance.RestoreScreenAwakeAsync(device.Serial);
+                }
             };
 
             if (process.Start())
@@ -298,7 +300,7 @@ public class MirrorService
 
     public void StopMirroring(string serial)
     {
-        if (_activeSessions.TryGetValue(serial, out var proc))
+        if (_activeSessions.TryRemove(serial, out var proc))
         {
             try
             {
@@ -310,7 +312,6 @@ public class MirrorService
             catch { }
             finally
             {
-                _activeSessions.Remove(serial);
                 OnMirrorStateChanged?.Invoke(serial, false);
                 OnFpsUpdated?.Invoke(serial, 0.0);
                 Log($"Stopped mirror session for {serial}", LogLevel.Info);

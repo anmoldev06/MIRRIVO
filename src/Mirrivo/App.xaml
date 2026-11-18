@@ -13,6 +13,9 @@
             <converters:BoolToVisibilityConverter x:Key="InverseBoolToVis" Invert="True" />
             <converters:NullToVisibilityConverter x:Key="NullToVis" />
             <converters:NullToVisibilityConverter x:Key="InverseNullToVis" Invert="True" />
+            <converters:CountToVisibilityConverter x:Key="CountToVis" MinCount="1" />
+            <converters:CountToVisibilityConverter x:Key="MultiCountToVis" MinCount="2" />
+            <converters:HexToBrushConverter x:Key="HexToBrush" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

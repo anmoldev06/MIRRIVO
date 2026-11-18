@@ -138,6 +138,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     // Mirroring State & Button Bindings
+    public bool HasSelectedDevice => SelectedDevice != null;
     public bool IsMirroringActive => SelectedDevice != null && _mirror.IsMirroring(SelectedDevice.Serial);
     public string MirrorButtonText => IsMirroringActive ? "⏹ STOP MIRRORING" : "▶ START MIRRORING";
     public string MirrorButtonBackground => IsMirroringActive ? "#DC2626" : "#FFFFFF"; // Red when active, White when stopped
@@ -297,6 +298,7 @@ public partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(Devices));
         OnPropertyChanged(nameof(SelectedDevice));
+        OnPropertyChanged(nameof(HasSelectedDevice));
         OnPropertyChanged(nameof(DetailedDevicesSummary));
         OnPropertyChanged(nameof(IsMirroringActive));
         OnPropertyChanged(nameof(MirrorButtonText));
@@ -378,22 +380,41 @@ public partial class MainViewModel : ObservableObject
             Application.Current?.Dispatcher?.Invoke(() =>
             {
                 var currentSelectedSerial = SelectedDevice?.Serial;
-                int oldBattery = SelectedDevice?.BatteryLevel ?? -1;
+                var listSerials = list.Select(d => d.Serial).ToHashSet();
 
-                Devices.Clear();
-                foreach (var d in list)
+                // 1. Remove disconnected devices
+                for (int i = Devices.Count - 1; i >= 0; i--)
                 {
-                    if (_mirror.IsMirroring(d.Serial))
+                    if (!listSerials.Contains(Devices[i].Serial))
                     {
-                        d.Status = DeviceConnectionStatus.Mirroring;
+                        Devices.RemoveAt(i);
                     }
-                    if (d.Serial == currentSelectedSerial && oldBattery > 0)
-                    {
-                        d.BatteryLevel = oldBattery;
-                    }
-                    Devices.Add(d);
                 }
 
+                // 2. Add new or update existing devices in-place
+                foreach (var d in list)
+                {
+                    var existing = Devices.FirstOrDefault(x => x.Serial == d.Serial);
+                    bool isMirroring = _mirror.IsMirroring(d.Serial);
+                    var status = isMirroring ? DeviceConnectionStatus.Mirroring :
+                                 d.State == "unauthorized" ? DeviceConnectionStatus.Unauthorized :
+                                 DeviceConnectionStatus.Ready;
+
+                    if (existing != null)
+                    {
+                        existing.Model = d.Model;
+                        existing.State = d.State;
+                        existing.Product = d.Product;
+                        existing.Status = status;
+                    }
+                    else
+                    {
+                        d.Status = status;
+                        Devices.Add(d);
+                    }
+                }
+
+                // 3. Preserve or assign SelectedDevice smoothly
                 if (!string.IsNullOrEmpty(currentSelectedSerial))
                 {
                     SelectedDevice = Devices.FirstOrDefault(d => d.Serial == currentSelectedSerial) ?? Devices.FirstOrDefault();
@@ -416,7 +437,6 @@ public partial class MainViewModel : ObservableObject
                         if (SelectedDevice != null)
                         {
                             SelectedDevice.BatteryLevel = battery;
-                            OnPropertyChanged(nameof(SelectedDevice));
                         }
                     });
                 }

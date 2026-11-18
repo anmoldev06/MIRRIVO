@@ -20,15 +20,31 @@ public partial class MainWindow : Window
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.ClickCount == 2)
+        {
+            ToggleMaximize();
+            return;
+        }
+
         if (e.LeftButton == MouseButtonState.Pressed)
         {
             DragMove();
         }
     }
 
+    private void ToggleMaximize()
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        ToggleMaximize();
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)

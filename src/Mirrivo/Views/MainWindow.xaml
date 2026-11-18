@@ -125,8 +125,9 @@
                             Margin="0,0,16,0" />
 
                     <!-- Window State Controls -->
-                    <Button Content="—" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MinimizeButton_Click" Margin="0,0,4,0" />
-                    <Button Content="✕" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="CloseButton_Click" />
+                    <Button Content="—" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MinimizeButton_Click" ToolTip="Minimize" Margin="0,0,4,0" />
+                    <Button Content="□" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="MaximizeButton_Click" ToolTip="Maximize / Restore" Margin="0,0,4,0" />
+                    <Button Content="✕" Style="{StaticResource GeistIconButton}" Width="30" Height="30" Click="CloseButton_Click" ToolTip="Close" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -163,7 +164,7 @@
                            Foreground="{StaticResource BrushMute}"
                            Margin="0,0,0,6" />
 
-                <!-- Multi-Device Selector Bar (Shows all connected devices so user can switch) -->
+                <!-- Multi-Device Selector Bar (Shows only when 2+ devices are connected) -->
                 <Border Grid.Row="1"
                         Background="#0D0D0D"
                         BorderBrush="{StaticResource BrushHairline}"
@@ -171,7 +172,7 @@
                         CornerRadius="8"
                         Padding="6,4"
                         Margin="0,0,0,12"
-                        Visibility="{Binding Devices.Count, Converter={StaticResource NullToVis}}">
+                        Visibility="{Binding Devices.Count, Converter={StaticResource MultiCountToVis}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -254,15 +255,15 @@
 
                             <StackPanel Grid.Column="0">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                    <!-- Status Pill -->
+                                    <!-- Dynamic Live Status Pill -->
                                     <Border Background="#171717" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="6" Height="6" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <Ellipse Width="6" Height="6" Fill="{Binding SelectedDevice.StatusColor, Converter={StaticResource HexToBrush}}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="{Binding SelectedDevice.StatusText, FallbackValue=READY}"
                                                        FontFamily="{StaticResource FontMono}"
                                                        FontSize="10"
                                                        FontWeight="Bold"
-                                                       Foreground="#10B981" />
+                                                       Foreground="{Binding SelectedDevice.StatusColor, Converter={StaticResource HexToBrush}}" />
                                         </StackPanel>
                                     </Border>
                                     <!-- Connection Type Badge -->
@@ -329,31 +330,73 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Device Visual / Info Box -->
+                        <!-- Device Visual / Info HUD Box -->
                         <Border Grid.Row="1"
                                 Background="#0A0A0A"
                                 BorderBrush="{StaticResource BrushHairline}"
                                 BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="16"
+                                CornerRadius="10"
+                                Padding="18"
                                 Margin="0,0,0,16">
                             <Grid VerticalAlignment="Center">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <Border Width="56" Height="56" CornerRadius="12" Background="#000000" BorderBrush="#262626" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,10" ClipToBounds="True">
+                                <!-- When Stream is Idle -->
+                                <StackPanel HorizontalAlignment="Center" Visibility="{Binding IsMirroringActive, Converter={StaticResource InverseBoolToVis}}">
+                                    <Border Width="54" Height="54" CornerRadius="14" Background="#000000" BorderBrush="#262626" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,10" ClipToBounds="True">
                                         <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="4" />
                                     </Border>
-                                    <TextBlock Text="Sub-30ms Ultra Low-Latency Stream Ready"
+                                    <TextBlock Text="Low-Latency Mirror Ready"
                                                FontFamily="{StaticResource FontSans}"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
+                                               FontSize="14"
+                                               FontWeight="Bold"
                                                Foreground="{StaticResource BrushInk}"
                                                HorizontalAlignment="Center"
-                                               Margin="0,0,0,2" />
-                                    <TextBlock Text="Mouse taps, drag-scroll &amp; PC keyboard typing mapped automatically."
+                                               Margin="0,0,0,3" />
+                                    <TextBlock Text="Click ▶ START MIRRORING to launch phone screen on PC."
                                                FontFamily="{StaticResource FontSans}"
                                                FontSize="11"
                                                Foreground="{StaticResource BrushBody}"
-                                               HorizontalAlignment="Center" />
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,8" />
+                                    <!-- Quick Feature Badges -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,0,6,0">
+                                            <TextBlock Text="⌨ PC Keyboard Input" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" />
+                                        </Border>
+                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,0,6,0">
+                                            <TextBlock Text="🖱 Drag &amp; Click" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" />
+                                        </Border>
+                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="8,3">
+                                            <TextBlock Text="⚡ Zero Lag Wi-Fi" FontFamily="{StaticResource FontMono}" FontSize="9" Foreground="{StaticResource BrushMute}" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- When Stream is Active -->
+                                <StackPanel HorizontalAlignment="Center" Visibility="{Binding IsMirroringActive, Converter={StaticResource BoolToVis}}">
+                                    <Border Width="54" Height="54" CornerRadius="14" Background="#05192D" BorderBrush="#0070F3" BorderThickness="1.5" HorizontalAlignment="Center" Margin="0,0,0,10" ClipToBounds="True">
+                                        <TextBlock Text="●" FontSize="26" Foreground="#0070F3" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="Live Stream In Progress"
+                                               FontFamily="{StaticResource FontSans}"
+                                               FontSize="14"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource BrushBlue}"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,3" />
+                                    <TextBlock Text="Phone screen mirrored to PC. Control directly with your mouse &amp; keyboard."
+                                               FontFamily="{StaticResource FontSans}"
+                                               FontSize="11"
+                                               Foreground="{StaticResource BrushBody}"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,8" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Border Background="#0C2038" BorderBrush="#0070F3" BorderThickness="1" CornerRadius="6" Padding="10,3" Margin="0,0,6,0">
+                                            <TextBlock Text="{Binding FpsDisplay}" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushBlue}" />
+                                        </Border>
+                                        <Border Background="#141414" BorderBrush="#222222" BorderThickness="1" CornerRadius="6" Padding="10,3">
+                                            <TextBlock Text="{Binding SelectedResolution}" FontFamily="{StaticResource FontMono}" FontSize="10" Foreground="{StaticResource BrushBody}" />
+                                        </Border>
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -571,7 +614,7 @@
                                            Foreground="{StaticResource BrushMute}"
                                            Margin="0,0,0,12" />
 
-                                <UniformGrid Columns="4" Rows="2" Margin="0,0,0,0">
+                                <UniformGrid Columns="4" Rows="2" Margin="0,0,0,0" IsEnabled="{Binding HasSelectedDevice}">
                                     <Button Content="⮌ Back" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"
                                             Command="{Binding SendKeyCommand}" CommandParameter="Back" />
                                     <Button Content="○ Home" Style="{StaticResource GeistButtonSquare}" Height="34" Margin="2"

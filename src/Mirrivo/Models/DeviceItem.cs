@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace Mirrivo.Models;
 
 public enum DeviceConnectionStatus
@@ -9,24 +11,40 @@ public enum DeviceConnectionStatus
     Unauthorized
 }
 
-public class DeviceItem
+public partial class DeviceItem : ObservableObject
 {
-    public string Serial { get; set; } = string.Empty;
-    public string Model { get; set; } = "Unknown Android";
-    public string Product { get; set; } = string.Empty;
-    public string State { get; set; } = "device";
-    public string TransportId { get; set; } = string.Empty;
-    
+    [ObservableProperty]
+    private string _serial = string.Empty;
+
+    [ObservableProperty]
+    private string _model = "Unknown Android";
+
+    [ObservableProperty]
+    private string _product = string.Empty;
+
+    [ObservableProperty]
+    private string _state = "device";
+
+    [ObservableProperty]
+    private string _transportId = string.Empty;
+
     public bool IsWireless => Serial.Contains(':') || Serial.StartsWith("192.") || Serial.StartsWith("10.") || Serial.StartsWith("172.");
     public string ConnectionTypeDisplay => IsWireless ? "Wireless Wi-Fi" : "USB Cable";
     
     public string SwitchModeText => IsWireless ? "🔌 Switch to USB" : "📶 Switch to Wi-Fi";
     public string DisconnectOrReconnectText => IsWireless ? "✕ Disconnect Wi-Fi" : "⚡ Reset USB Link";
-    
-    public int BatteryLevel { get; set; } = -1;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BatteryDisplay))]
+    private int _batteryLevel = -1;
+
     public string BatteryDisplay => BatteryLevel >= 0 ? $"{BatteryLevel}%" : "--%";
-    
-    public DeviceConnectionStatus Status { get; set; } = DeviceConnectionStatus.Ready;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(StatusColor))]
+    private DeviceConnectionStatus _status = DeviceConnectionStatus.Ready;
+
     public string StatusText => Status switch
     {
         DeviceConnectionStatus.Ready => "READY",
