@@ -8,10 +8,10 @@ namespace Mirrivo.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly Brush _defaultDropBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#121212"));
-    private readonly Brush _hoverDropBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0C1A30"));
-    private readonly Brush _defaultDropBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#262626"));
-    private readonly Brush _hoverDropBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0070F3"));
+    private readonly Brush _defaultDropBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFFF"));
+    private readonly Brush _hoverDropBackground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F0F6FF"));
+    private readonly Brush _defaultDropBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E5EA"));
+    private readonly Brush _hoverDropBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0071E3"));
 
     public MainWindow()
     {
@@ -118,8 +118,8 @@ public partial class MainWindow : Window
             DropZoneBorder.Background = _defaultDropBackground;
             DropZoneBorder.BorderBrush = _defaultDropBorder;
             DropZoneBorder.BorderThickness = new Thickness(1);
-            DropZoneText.Text = "Drag & drop files to share with phone";
-            DropZoneText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EDEDED"));
+            DropZoneText.Text = "Drag & drop files anywhere to share instantly with phone";
+            DropZoneText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1D1D1F"));
             DropZoneIcon.Text = "📥";
         }
     }

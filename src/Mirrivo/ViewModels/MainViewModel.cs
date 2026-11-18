@@ -68,8 +68,8 @@ public partial class MainViewModel : ObservableObject
     private UpdateInfo? _availableUpdate = null;
 
     public string VersionBadgeText => HasUpdate ? $"★ v{LatestVersion} UPDATE" : $"v{UpdateService.CurrentVersionString}";
-    public string VersionBadgeBackground => HasUpdate ? "#10B981" : "#171717";
-    public string VersionBadgeForeground => HasUpdate ? "#000000" : "#A1A1A1";
+    public string VersionBadgeBackground => HasUpdate ? "#34C759" : "#E8E8ED";
+    public string VersionBadgeForeground => HasUpdate ? "#FFFFFF" : "#6E6E73";
 
     partial void OnAlwaysOnTopChanged(bool value)
     {
@@ -158,9 +158,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _lastRecordingPath = "";
 
-    public string RecordButtonText => IsRecording ? $"⏹ STOP ({RecordingTimerText})" : "⏺ RECORD";
-    public string RecordButtonBackground => IsRecording ? "#DC2626" : "#171717";
-    public string RecordButtonForeground => IsRecording ? "#FFFFFF" : "#EDEDED";
+    public string RecordButtonText => IsRecording ? $"Stop ({RecordingTimerText})" : "Record Screen";
+    public string RecordButtonBackground => IsRecording ? "#FF3B30" : "#FFFFFF";
+    public string RecordButtonForeground => IsRecording ? "#FFFFFF" : "#1D1D1F";
 
     private DispatcherTimer? _recordingTimer;
     private DateTime _recordingStartTime;
@@ -215,16 +215,16 @@ public partial class MainViewModel : ObservableObject
     // Mirroring State & Button Bindings
     public bool HasSelectedDevice => SelectedDevice != null;
     public bool IsMirroringActive => SelectedDevice != null && _mirror.IsMirroring(SelectedDevice.Serial);
-    public string MirrorButtonText => IsMirroringActive ? "⏹ STOP MIRRORING" : "▶ START MIRRORING";
-    public string MirrorButtonBackground => IsMirroringActive ? "#DC2626" : "#FFFFFF"; // Red when active, White when stopped
-    public string MirrorButtonForeground => IsMirroringActive ? "#FFFFFF" : "#000000";
+    public string MirrorButtonText => IsMirroringActive ? "Stop Mirroring" : "Start Mirroring";
+    public string MirrorButtonBackground => IsMirroringActive ? "#FF3B30" : "#0071E3";
+    public string MirrorButtonForeground => "#FFFFFF";
 
     // Phone Storage File Explorer Mounting
     public bool IsPhoneStorageMounted => _storage.IsMounted;
     public string PhoneStorageDriveLetterDisplay => _storage.MountedDriveLetter.HasValue ? $"{_storage.MountedDriveLetter.Value}:" : "";
     public string PhoneStorageButtonText => _storage.IsMounted
-        ? $"📁 Phone ({_storage.MountedDriveLetter}:)"
-        : "📁 Phone Files";
+        ? $"Phone ({_storage.MountedDriveLetter}:)"
+        : "Phone Storage";
     public string PhoneStorageStatusText => _storage.IsMounted
         ? $"Mounted on {_storage.MountedDriveLetter}: in File Explorer"
         : "Mount phone storage wirelessly in File Explorer";
