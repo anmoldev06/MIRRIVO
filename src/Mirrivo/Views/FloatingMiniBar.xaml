@@ -11,6 +11,11 @@
         Topmost="True"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled"
         ToolTipService.InitialShowDelay="50"
         ToolTipService.ShowDuration="6000"
         MouseDown="Window_MouseDown">

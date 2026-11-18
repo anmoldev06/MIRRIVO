@@ -5,16 +5,16 @@
          APPLE DESIGN SYSTEM - PURE LIQUID GLASS (LIGHT THEME)
          From DESIGN-apple.md: #F5F5F7 Canvas, #FFFFFF Surfaces, #0071E3 Action Blue
          ============================================== -->
-    <Color x:Key="ColorCanvas">#F5F5F7</Color>
+    <Color x:Key="ColorCanvas">#F0F0F5</Color>
     <Color x:Key="ColorCanvasElevated">#FFFFFF</Color>
-    <Color x:Key="ColorCanvasSoft">#EFEFF4</Color>
-    <Color x:Key="ColorHairline">#E5E5EA</Color>
-    <Color x:Key="ColorHairlineLight">#D2D2D7</Color>
+    <Color x:Key="ColorCanvasSoft">#E8E8ED</Color>
+    <Color x:Key="ColorHairline">#D8D8DF</Color>
+    <Color x:Key="ColorHairlineLight">#C5C5CE</Color>
     <Color x:Key="ColorInk">#1D1D1F</Color>
     <Color x:Key="ColorInkDark">#000000</Color>
-    <Color x:Key="ColorInkSecondary">#6E6E73</Color>
-    <Color x:Key="ColorBody">#3A3A3C</Color>
-    <Color x:Key="ColorMute">#86868B</Color>
+    <Color x:Key="ColorInkSecondary">#48484A</Color>
+    <Color x:Key="ColorBody">#3A3A3E</Color>
+    <Color x:Key="ColorMute">#636366</Color>
     <Color x:Key="ColorBlue">#0071E3</Color>
     <Color x:Key="ColorSuccess">#34C759</Color>
     <Color x:Key="ColorError">#FF3B30</Color>
@@ -35,9 +35,9 @@
     <SolidColorBrush x:Key="BrushSuccess" Color="{StaticResource ColorSuccess}" />
     <SolidColorBrush x:Key="BrushError" Color="{StaticResource ColorError}" />
 
-    <!-- Fonts -->
-    <FontFamily x:Key="FontSans">SF Pro Text, Segoe UI Variable Text, Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif</FontFamily>
-    <FontFamily x:Key="FontMono">SF Mono, Cascadia Code, Consolas, monospace</FontFamily>
+    <!-- Fonts (Native Crisp Display Metrics) -->
+    <FontFamily x:Key="FontSans">Segoe UI Variable Text, Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif</FontFamily>
+    <FontFamily x:Key="FontMono">Cascadia Code, Consolas, Courier New, monospace</FontFamily>
 
     <!-- ==============================================
          SCROLLBAR STYLE (Minimalist Apple Light)
@@ -360,6 +360,69 @@
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="#D2D2D7" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Windows Window Control Buttons (Minimize, Maximize) -->
+    <Style x:Key="WindowControlBtn" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="#5C5C62" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#E5E5EA" />
+                            <Setter Property="Foreground" Value="#1D1D1F" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#D2D2D7" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Windows Window Close Button (Red on Hover) -->
+    <Style x:Key="WindowCloseBtn" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="#5C5C62" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#E81123" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#C4101E" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

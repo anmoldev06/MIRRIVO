@@ -13,6 +13,12 @@
         Icon="/Assets/app_icon.png"
         BorderBrush="{StaticResource BrushHairline}"
         BorderThickness="1"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled"
+        RenderOptions.BitmapScalingMode="HighQuality"
         AllowDrop="True"
         DragEnter="Window_DragEnter"
         DragLeave="Window_DragLeave"
@@ -47,66 +53,23 @@
             </Border.Effect>
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <!-- Left: macOS Traffic Lights + Brand -->
+                    <!-- Left: Brand & Status -->
                     <ColumnDefinition Width="Auto" />
                     <!-- Center: Segmented Navigation Pill -->
                     <ColumnDefinition Width="*" />
-                    <!-- Right: Device Pill & Window Controls -->
+                    <!-- Right: Device Pill & Windows Window Controls -->
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Traffic Lights & Brand -->
+                <!-- Left: MIRRIVO Brand & Status -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- macOS Traffic Lights Window Controls -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Center">
-                        <!-- Close (Red) -->
-                        <Button Click="CloseButton_Click" ToolTip="Close" Width="12" Height="12" Cursor="Hand" Margin="0,0,8,0">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="dot" Width="12" Height="12" CornerRadius="6" Background="#FF5F56" BorderBrush="#E0443E" BorderThickness="0.5" />
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="dot" Property="Background" Value="#E0443E" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                        <!-- Minimize (Yellow) -->
-                        <Button Click="MinimizeButton_Click" ToolTip="Minimize" Width="12" Height="12" Cursor="Hand" Margin="0,0,8,0">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="dot" Width="12" Height="12" CornerRadius="6" Background="#FFBD2E" BorderBrush="#DEA123" BorderThickness="0.5" />
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="dot" Property="Background" Value="#DEA123" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                        <!-- Maximize / Restore (Green) -->
-                        <Button Click="MaximizeButton_Click" ToolTip="Maximize / Restore" Width="12" Height="12" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="dot" Width="12" Height="12" CornerRadius="6" Background="#27C93F" BorderBrush="#1AAB29" BorderThickness="0.5" />
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="dot" Property="Background" Value="#1AAB29" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                    </StackPanel>
-
                     <!-- App Icon & Logo -->
-                    <Border Width="26" Height="26" CornerRadius="6" Background="#FFFFFF" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" Margin="0,0,10,0" ClipToBounds="True">
+                    <Border Width="28" Height="28" CornerRadius="7" Background="#FFFFFF" BorderBrush="{StaticResource BrushHairline}" BorderThickness="1" Margin="0,0,10,0" ClipToBounds="True">
                         <Image Source="/Assets/app_icon.png" Stretch="Uniform" Margin="2" />
                     </Border>
                     <TextBlock Text="MIRRIVO"
                                FontFamily="{StaticResource FontSans}"
-                               FontSize="14"
+                               FontSize="15"
                                FontWeight="Bold"
                                Foreground="{StaticResource BrushInk}"
                                VerticalAlignment="Center"
@@ -232,6 +195,13 @@
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
+
+                    <!-- Standard Windows Window Controls (Minimize, Maximize, Close) -->
+                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <Button Content="—" Style="{StaticResource WindowControlBtn}" Width="36" Height="30" Click="MinimizeButton_Click" ToolTip="Minimize" Margin="0,0,2,0" />
+                        <Button Content="□" Style="{StaticResource WindowControlBtn}" Width="36" Height="30" Click="MaximizeButton_Click" ToolTip="Maximize / Restore" Margin="0,0,2,0" />
+                        <Button Content="✕" Style="{StaticResource WindowCloseBtn}" Width="36" Height="30" Click="CloseButton_Click" ToolTip="Close" />
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>

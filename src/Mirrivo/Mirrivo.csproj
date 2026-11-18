@@ -11,6 +11,7 @@
     <Description>Modern Android Screen Control &amp; Wireless Mirroring</Description>
     <Version>1.0.2</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
