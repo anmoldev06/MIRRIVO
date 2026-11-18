@@ -22,24 +22,27 @@ public class EngineService
     public void Initialize()
     {
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? baseDir;
         
-        // 1. Check if Engine folder exists next to executable
-        string localEngine = Path.Combine(baseDir, "Engine");
-        if (File.Exists(Path.Combine(localEngine, "scrcpy.exe")) && File.Exists(Path.Combine(localEngine, "adb.exe")))
+        // 1. Check if Engine folder exists next to executable or process dir
+        foreach (var dir in new[] { exeDir, baseDir })
         {
-            EngineDirectory = localEngine;
-            AdbPath = Path.Combine(localEngine, "adb.exe");
-            ScrcpyPath = Path.Combine(localEngine, "scrcpy.exe");
-            return;
-        }
+            string localEngine = Path.Combine(dir, "Engine");
+            if (File.Exists(Path.Combine(localEngine, "scrcpy.exe")) && File.Exists(Path.Combine(localEngine, "adb.exe")))
+            {
+                EngineDirectory = localEngine;
+                AdbPath = Path.Combine(localEngine, "adb.exe");
+                ScrcpyPath = Path.Combine(localEngine, "scrcpy.exe");
+                return;
+            }
 
-        // 2. Check root next to executable
-        if (File.Exists(Path.Combine(baseDir, "scrcpy.exe")) && File.Exists(Path.Combine(baseDir, "adb.exe")))
-        {
-            EngineDirectory = baseDir;
-            AdbPath = Path.Combine(baseDir, "adb.exe");
-            ScrcpyPath = Path.Combine(baseDir, "scrcpy.exe");
-            return;
+            if (File.Exists(Path.Combine(dir, "scrcpy.exe")) && File.Exists(Path.Combine(dir, "adb.exe")))
+            {
+                EngineDirectory = dir;
+                AdbPath = Path.Combine(dir, "adb.exe");
+                ScrcpyPath = Path.Combine(dir, "scrcpy.exe");
+                return;
+            }
         }
 
         // 3. Check LocalAppData directory
