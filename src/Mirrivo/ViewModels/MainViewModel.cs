@@ -34,7 +34,15 @@ public partial class MainViewModel : ObservableObject
     private bool _isBusy = false;
 
     [ObservableProperty]
-    private string _activeTab = "Mirror"; // "Mirror", "Settings", "Wireless", "Console"
+    private string _activeTab = "Mirror"; // "Mirror", "Apps", "Settings", "Wireless", "Console"
+
+    partial void OnActiveTabChanged(string value)
+    {
+        if (value.Equals("Apps", StringComparison.OrdinalIgnoreCase) && InstalledApps.Count == 0 && SelectedDevice != null && !IsLoadingApps)
+        {
+            _ = LoadInstalledAppsAsync();
+        }
+    }
 
     [RelayCommand]
     public void SetActiveTab(string tab)
@@ -111,6 +119,192 @@ public partial class MainViewModel : ObservableObject
                 });
             });
         }
+    }
+
+    // ==============================================
+    // APPS MANAGER & GHOST DISPLAY STATE & COMMANDS
+    // ==============================================
+    public ObservableCollection<AppItem> InstalledApps { get; } = new();
+    public ObservableCollection<AppItem> FilteredApps { get; } = new();
+
+    [ObservableProperty]
+    private string _appSearchQuery = "";
+
+    partial void OnAppSearchQueryChanged(string value)
+    {
+        ApplyAppsFilter();
+    }
+
+    [ObservableProperty]
+    private string _appFilterMode = "All"; // "All", "User", "System"
+
+    partial void OnAppFilterModeChanged(string value)
+    {
+        ApplyAppsFilter();
+    }
+
+    [ObservableProperty]
+    private bool _isLoadingApps = false;
+
+    [ObservableProperty]
+    private int _totalAppsCount = 0;
+
+    [ObservableProperty]
+    private int _userAppsCount = 0;
+
+    [RelayCommand]
+    public void SetAppFilter(string filter)
+    {
+        AppFilterMode = filter;
+    }
+
+    private void ApplyAppsFilter()
+    {
+        string query = AppSearchQuery?.Trim().ToLowerInvariant() ?? "";
+        var filtered = InstalledApps.Where(a =>
+        {
+            if (AppFilterMode == "User" && a.IsSystemApp) return false;
+            if (AppFilterMode == "System" && !a.IsSystemApp) return false;
+
+            if (!string.IsNullOrEmpty(query))
+            {
+                return a.DisplayName.ToLowerInvariant().Contains(query) ||
+                       a.PackageName.ToLowerInvariant().Contains(query) ||
+                       a.Category.ToLowerInvariant().Contains(query);
+            }
+            return true;
+        }).ToList();
+
+        FilteredApps.Clear();
+        foreach (var app in filtered)
+        {
+            FilteredApps.Add(app);
+        }
+    }
+
+    [RelayCommand]
+    public async Task LoadInstalledAppsAsync()
+    {
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Please connect and select an Android phone first.", "MIRRIVO // Apps Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        IsLoadingApps = true;
+        StatusText = $"Scanning installed applications on {SelectedDevice.Model}...";
+
+        try
+        {
+            var apps = await _adb.GetInstalledAppsAsync(SelectedDevice.Serial);
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                InstalledApps.Clear();
+                foreach (var app in apps)
+                {
+                    InstalledApps.Add(app);
+                }
+                TotalAppsCount = InstalledApps.Count;
+                UserAppsCount = InstalledApps.Count(a => !a.IsSystemApp);
+                ApplyAppsFilter();
+                StatusText = $"{TotalAppsCount} apps loaded ({UserAppsCount} user apps)";
+            });
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to load installed apps: {ex.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            IsLoadingApps = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenGhostDisplayAsync(AppItem? app)
+    {
+        if (app == null) return;
+        if (SelectedDevice == null)
+        {
+            MessageBox.Show("Please connect and select an Android phone first.", "MIRRIVO // Dual Display", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        Log($"Launching '{app.DisplayName}' on PC in independent Ghost / Dual Virtual Display...", LogLevel.Command);
+        StatusText = $"Opening {app.DisplayName} on PC in Dual Display...";
+
+        bool ok = await _mirror.LaunchAppInGhostDisplayAsync(SelectedDevice, app.PackageName, app.DisplayName);
+        if (ok)
+        {
+            StatusText = $"Dual Display active: {app.DisplayName}";
+        }
+        else
+        {
+            StatusText = $"Failed to start {app.DisplayName} in Dual Display";
+            MessageBox.Show($"Could not start {app.DisplayName} in Dual Display.\nEnsure device is running Android 10 or newer.", "MIRRIVO // Dual Display", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenOnPhoneAsync(AppItem? app)
+    {
+        if (app == null || SelectedDevice == null) return;
+        await _adb.LaunchAppOnPhoneAsync(SelectedDevice.Serial, app.PackageName);
+    }
+
+    [RelayCommand]
+    public async Task UninstallAppAsync(AppItem? app)
+    {
+        if (app == null || SelectedDevice == null) return;
+
+        var confirm = MessageBox.Show($"Are you sure you want to uninstall '{app.DisplayName}' from your phone?\n\nPackage: {app.PackageName}", "MIRRIVO // Uninstall App", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        var (ok, msg) = await _adb.UninstallAppAsync(SelectedDevice.Serial, app.PackageName);
+        if (ok)
+        {
+            InstalledApps.Remove(app);
+            ApplyAppsFilter();
+            MessageBox.Show($"'{app.DisplayName}' was successfully uninstalled from your phone.", "MIRRIVO // Uninstalled", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show($"Failed to uninstall: {msg}", "MIRRIVO // Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public async Task ClearAppDataAsync(AppItem? app)
+    {
+        if (app == null || SelectedDevice == null) return;
+
+        var confirm = MessageBox.Show($"Clear all data and cache for '{app.DisplayName}'?\n(This will reset the app as if freshly installed)", "MIRRIVO // Clear App Data", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        var (ok, msg) = await _adb.ClearAppDataAsync(SelectedDevice.Serial, app.PackageName);
+        if (ok)
+        {
+            MessageBox.Show($"Data and cache cleared for '{app.DisplayName}'.", "MIRRIVO // Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show($"Failed: {msg}", "MIRRIVO // Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public async Task ForceStopAppAsync(AppItem? app)
+    {
+        if (app == null || SelectedDevice == null) return;
+        await _adb.ForceStopAppAsync(SelectedDevice.Serial, app.PackageName);
+        StatusText = $"Force-stopped {app.DisplayName}";
+    }
+
+    [RelayCommand]
+    public void ShowAppDetails(AppItem? app)
+    {
+        if (app == null) return;
+        MessageBox.Show($"Application Details:\n\nName: {app.DisplayName}\nPackage: {app.PackageName}\nCategory: {app.Category}\nType: {(app.IsSystemApp ? "System Application" : "User Installed Application")}", "MIRRIVO // App Info", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     // Upload & File Sharing Live Progress State
@@ -424,6 +618,10 @@ public partial class MainViewModel : ObservableObject
         if (value != null && IsMirroringActive)
         {
             _mirror.SetAlwaysOnTop(value.Serial, AlwaysOnTop);
+        }
+        if (value != null && ActiveTab.Equals("Apps", StringComparison.OrdinalIgnoreCase))
+        {
+            _ = LoadInstalledAppsAsync();
         }
     }
 

@@ -105,7 +105,20 @@
                             </StackPanel>
                         </Button>
 
-                        <!-- Tab 2: Settings -->
+                        <!-- Tab 2: Apps (Ghost & Dual Display) -->
+                        <Button Style="{StaticResource AppleSegmentTab}"
+                                Command="{Binding SetActiveTabCommand}"
+                                CommandParameter="Apps"
+                                Margin="1,0"
+                                Background="{Binding ActiveTab, Converter={StaticResource NavTabActiveBackground}, ConverterParameter=Apps}"
+                                Foreground="{Binding ActiveTab, Converter={StaticResource NavTabActiveForeground}, ConverterParameter=Apps}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📦" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Apps" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Tab 3: Settings -->
                         <Button Style="{StaticResource AppleSegmentTab}"
                                 Command="{Binding SetActiveTabCommand}"
                                 CommandParameter="Settings"
@@ -680,7 +693,419 @@
             </Grid>
 
             <!-- ==============================================
-                 TAB 2: SETTINGS (macOS SYSTEM SETTINGS STYLE)
+                 TAB 2: APPS MANAGER & GHOST DUAL DISPLAY
+                 ============================================== -->
+            <Grid Visibility="{Binding ActiveTab, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Apps}"
+                  Margin="24,16,24,16">
+                <Grid.RowDefinitions>
+                    <!-- Row 0: Top Action Bar (Title, Search, Filters, Refresh) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Row 1: Dual Display Feature Banner -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Row 2: Apps Content (Grid or Empty/Loading State) -->
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Row 0: Action Bar -->
+                <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Title & Live App Counters -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Installed Applications"
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrushInk}"
+                                       VerticalAlignment="Center" />
+                            <Border Background="#E8E8ED"
+                                    CornerRadius="10"
+                                    Padding="8,2"
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock FontFamily="{StaticResource FontMono}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushInk}">
+                                    <Run Text="{Binding FilteredApps.Count, Mode=OneWay}" />
+                                    <Run Text="/" />
+                                    <Run Text="{Binding TotalAppsCount, Mode=OneWay}" />
+                                    <Run Text="APPS" />
+                                </TextBlock>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Click any app to run in Dual / Ghost Display on PC without disturbing phone user."
+                                   FontFamily="{StaticResource FontSans}"
+                                   FontSize="12"
+                                   Foreground="{StaticResource BrushMute}"
+                                   Margin="0,3,0,0" />
+                    </StackPanel>
+
+                    <!-- Right: Search Bar, Category Filters & Refresh -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Filter Segmented Bar -->
+                        <Border Background="#E3E3E8"
+                                BorderBrush="#D5D5DC"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="2"
+                                Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="All"
+                                        Style="{StaticResource AppleSegmentTab}"
+                                        Height="26"
+                                        Padding="10,2"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Command="{Binding SetAppFilterCommand}"
+                                        CommandParameter="All"
+                                        Background="{Binding AppFilterMode, Converter={StaticResource FilterPillActiveBackground}, ConverterParameter=All}"
+                                        Foreground="{Binding AppFilterMode, Converter={StaticResource FilterPillActiveForeground}, ConverterParameter=All}" />
+                                <Button Content="User"
+                                        Style="{StaticResource AppleSegmentTab}"
+                                        Height="26"
+                                        Padding="10,2"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Command="{Binding SetAppFilterCommand}"
+                                        CommandParameter="User"
+                                        Background="{Binding AppFilterMode, Converter={StaticResource FilterPillActiveBackground}, ConverterParameter=User}"
+                                        Foreground="{Binding AppFilterMode, Converter={StaticResource FilterPillActiveForeground}, ConverterParameter=User}" />
+                                <Button Content="System"
+                                        Style="{StaticResource AppleSegmentTab}"
+                                        Height="26"
+                                        Padding="10,2"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Command="{Binding SetAppFilterCommand}"
+                                        CommandParameter="System"
+                                        Background="{Binding AppFilterMode, Converter={StaticResource FilterPillActiveBackground}, ConverterParameter=System}"
+                                        Foreground="{Binding AppFilterMode, Converter={StaticResource FilterPillActiveForeground}, ConverterParameter=System}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Search Input -->
+                        <Border Background="#FFFFFF"
+                                BorderBrush="{StaticResource BrushHairline}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Height="32"
+                                Width="210"
+                                Margin="0,0,10,0"
+                                Padding="8,0">
+                            <Grid VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🔍" FontSize="11" Foreground="{StaticResource BrushMute}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding AppSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         FontFamily="{StaticResource FontSans}"
+                                         FontSize="12"
+                                         Foreground="{StaticResource BrushInk}"
+                                         VerticalAlignment="Center">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="TextBox">
+                                                        <Grid>
+                                                            <ScrollViewer x:Name="PART_ContentHost" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                            <TextBlock Text="Search apps..."
+                                                                       Foreground="#A1A1A6"
+                                                                       FontSize="12"
+                                                                       FontFamily="{StaticResource FontSans}"
+                                                                       IsHitTestVisible="False"
+                                                                       VerticalAlignment="Center"
+                                                                       Visibility="{Binding Text.IsEmpty, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}" />
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                            </Grid>
+                        </Border>
+
+                        <!-- Refresh Apps Button -->
+                        <Button Style="{StaticResource AppleSegmentTab}"
+                                Command="{Binding LoadInstalledAppsCommand}"
+                                IsEnabled="{Binding IsLoadingApps, Converter={StaticResource InverseBoolToVis}}"
+                                Height="32"
+                                Padding="12,4"
+                                Background="#FFFFFF"
+                                BorderBrush="{StaticResource BrushHairline}"
+                                BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⟳" FontSize="12" FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Refresh" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Row 1: Dual Display Engine Banner -->
+                <Border Grid.Row="1"
+                        Background="#F0F6FF"
+                        BorderBrush="#D0E2FF"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="14,10"
+                        Margin="0,0,0,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="✨" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Dual / Ghost Display Multi-Instance Engine Active"
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#0056B3" />
+                            <TextBlock Text="Click any app to launch in an independent virtual display window on PC. The phone user can simultaneously use other apps without interference."
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="11"
+                                       Foreground="#3A5A80"
+                                       Margin="0,1,0,0" />
+                        </StackPanel>
+                        <Border Grid.Column="2"
+                                Background="#0071E3"
+                                CornerRadius="8"
+                                Padding="8,3"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="Android 10+" FontFamily="{StaticResource FontMono}" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Row 2: Content (Loading / Empty / Cards Grid) -->
+                <Grid Grid.Row="2">
+                    <!-- 1. Loading State -->
+                    <Border Background="#FFFFFF"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="30"
+                            Visibility="{Binding IsLoadingApps, Converter={StaticResource BoolToVis}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="⏳" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,12" />
+                            <TextBlock Text="Scanning Installed Applications..."
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushInk}"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Extracting package manifests, categories, and launcher activities via ADB"
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="12"
+                                       Foreground="{StaticResource BrushMute}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2. No Device Empty State -->
+                    <Border Background="#FFFFFF"
+                            BorderBrush="{StaticResource BrushHairline}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="30"
+                            Visibility="{Binding SelectedDevice, Converter={StaticResource InverseNullToVis}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="📱" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,12" />
+                            <TextBlock Text="No Phone Connected"
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource BrushInk}"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Connect your Android device via USB cable or Wi-Fi to scan and launch apps."
+                                       FontFamily="{StaticResource FontSans}"
+                                       FontSize="12"
+                                       Foreground="{StaticResource BrushMute}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,16" />
+                            <Button Style="{StaticResource AppleActionPill}"
+                                    Content="Go to Wireless Pairing"
+                                    Height="36"
+                                    FontSize="12"
+                                    Padding="16,0"
+                                    Command="{Binding SetActiveTabCommand}"
+                                    CommandParameter="Wireless"
+                                    HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 3. Apps Scrollable List Grid -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding IsLoadingApps, Converter={StaticResource InverseBoolToVis}}">
+                        <ItemsControl ItemsSource="{Binding FilteredApps}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- App Card with Dual Display Launch & Right-Click Management -->
+                                    <Border Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Background="#FFFFFF"
+                                            BorderBrush="{StaticResource BrushHairline}"
+                                            BorderThickness="1"
+                                            CornerRadius="14"
+                                            Width="300"
+                                            Height="84"
+                                            Margin="5,5,5,5"
+                                            Padding="12,10"
+                                            Cursor="Hand">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03" />
+                                        </Border.Effect>
+                                        <Border.InputBindings>
+                                            <MouseBinding Gesture="LeftClick"
+                                                          Command="{Binding DataContext.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}" />
+                                        </Border.InputBindings>
+                                        <Border.ContextMenu>
+                                            <ContextMenu Style="{StaticResource AppleContextMenu}">
+                                                <MenuItem Style="{StaticResource AppleMenuItem}"
+                                                          Header="Launch in Ghost / Dual Display (PC)"
+                                                          FontWeight="SemiBold"
+                                                          Command="{Binding PlacementTarget.Tag.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="🚀" FontSize="13" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Style="{StaticResource AppleMenuItem}"
+                                                          Header="Open on Physical Phone Screen"
+                                                          Command="{Binding PlacementTarget.Tag.OpenOnPhoneCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="📱" FontSize="13" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator Style="{StaticResource AppleMenuSeparator}" />
+                                                <MenuItem Style="{StaticResource AppleMenuItem}"
+                                                          Header="Force Stop App"
+                                                          Command="{Binding PlacementTarget.Tag.ForceStopAppCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="🛑" FontSize="13" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Style="{StaticResource AppleMenuItem}"
+                                                          Header="Clear Data &amp; Cache"
+                                                          Command="{Binding PlacementTarget.Tag.ClearAppDataCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="🧹" FontSize="13" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Style="{StaticResource AppleMenuItem}"
+                                                          Header="Uninstall from Phone"
+                                                          Foreground="{StaticResource BrushError}"
+                                                          Command="{Binding PlacementTarget.Tag.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="🗑️" FontSize="13" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator Style="{StaticResource AppleMenuSeparator}" />
+                                                <MenuItem Style="{StaticResource AppleMenuItem}"
+                                                          Header="App Information Details"
+                                                          Command="{Binding PlacementTarget.Tag.ShowAppDetailsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="ℹ️" FontSize="13" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <!-- App Icon -->
+                                                <ColumnDefinition Width="48" />
+                                                <!-- App Info -->
+                                                <ColumnDefinition Width="*" />
+                                                <!-- Quick Launch Action -->
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Column 0: App Icon Box -->
+                                            <Border Grid.Column="0"
+                                                    Width="44" Height="44"
+                                                    CornerRadius="10"
+                                                    Background="{Binding IconColor, Converter={StaticResource HexToBrush}}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding IconGlyph}"
+                                                           FontSize="20"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <!-- Column 1: App Info -->
+                                            <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           FontFamily="{StaticResource FontSans}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="13"
+                                                           Foreground="{StaticResource BrushInk}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding PackageName}"
+                                                           FontFamily="{StaticResource FontMono}"
+                                                           FontSize="9.5"
+                                                           Foreground="{StaticResource BrushMute}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Margin="0,1,0,3" />
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Background="#F2F2F7" CornerRadius="5" Padding="5,1" Margin="0,0,4,0">
+                                                        <TextBlock Text="{Binding Category}" FontFamily="{StaticResource FontSans}" FontSize="8.5" FontWeight="SemiBold" Foreground="{StaticResource BrushMute}" />
+                                                    </Border>
+                                                    <Border Background="#F2F2F7" CornerRadius="5" Padding="5,1">
+                                                        <TextBlock Text="{Binding AppTypeBadge}" FontFamily="{StaticResource FontMono}" FontSize="8" FontWeight="Bold" Foreground="{Binding AppTypeColor, Converter={StaticResource HexToBrush}}" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Column 2: Launch Ghost Display Capsule Button -->
+                                            <Button Grid.Column="2"
+                                                    Style="{StaticResource AppleSegmentTab}"
+                                                    ToolTip="Launch in Dual / Ghost Display (PC)"
+                                                    Command="{Binding DataContext.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="#F2F2F7"
+                                                    Height="28"
+                                                    Width="28"
+                                                    Padding="0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="⤢" FontSize="13" FontWeight="Bold" Foreground="{StaticResource BrushBlue}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- ==============================================
+                 TAB 3: SETTINGS (macOS SYSTEM SETTINGS STYLE)
                  ============================================== -->
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           Visibility="{Binding ActiveTab, Converter={StaticResource StringEqualsToVis}, ConverterParameter=Settings}">

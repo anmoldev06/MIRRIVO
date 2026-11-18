@@ -572,4 +572,237 @@ public class AdbService
         Log($"Screenshot failed: {err}", LogLevel.Error);
         return (false, err);
     }
+
+    // ==============================================
+    // APP MANAGEMENT & GHOST DISPLAY OPERATIONS
+    // ==============================================
+    private static readonly Dictionary<string, (string Name, string Category, string Icon, string Color)> KnownApps = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "com.whatsapp", ("WhatsApp", "Messaging", "💬", "#25D366") },
+        { "com.whatsapp.w4b", ("WhatsApp Business", "Business", "💼", "#25D366") },
+        { "com.instagram.android", ("Instagram", "Social", "📸", "#E1306C") },
+        { "com.google.android.youtube", ("YouTube", "Video", "▶️", "#FF0000") },
+        { "com.android.chrome", ("Google Chrome", "Browser", "🌐", "#4285F4") },
+        { "org.telegram.messenger", ("Telegram", "Messaging", "✈️", "#0088CC") },
+        { "com.snapchat.android", ("Snapchat", "Social", "👻", "#FFFC00") },
+        { "com.facebook.katana", ("Facebook", "Social", "👥", "#1877F2") },
+        { "com.facebook.orca", ("Messenger", "Messaging", "⚡", "#006AFF") },
+        { "com.spotify.music", ("Spotify", "Music", "🎵", "#1DB954") },
+        { "com.netflix.mediaclient", ("Netflix", "Video", "🍿", "#E50914") },
+        { "com.amazon.mShop.android.shopping", ("Amazon Shopping", "Shopping", "🛒", "#FF9900") },
+        { "com.openai.chatgpt", ("ChatGPT", "AI Assistant", "🤖", "#10A37F") },
+        { "com.google.android.apps.bard", ("Google Gemini", "AI Assistant", "✨", "#4285F4") },
+        { "com.twitter.android", ("X (Twitter)", "Social", "✖️", "#1DA1F2") },
+        { "com.reddit.frontpage", ("Reddit", "Community", "🤖", "#FF4500") },
+        { "com.linkedin.android", ("LinkedIn", "Professional", "💼", "#0A66C2") },
+        { "com.discord", ("Discord", "Gaming & Chat", "🎮", "#5865F2") },
+        { "us.zoom.videomeetings", ("Zoom", "Meetings", "📹", "#2D8CFF") },
+        { "com.google.android.gm", ("Gmail", "Mail", "✉️", "#EA4335") },
+        { "com.google.android.apps.maps", ("Google Maps", "Navigation", "🗺️", "#34A853") },
+        { "com.google.android.apps.photos", ("Google Photos", "Photos", "🖼️", "#4285F4") },
+        { "com.google.android.apps.docs", ("Google Docs", "Productivity", "📄", "#4285F4") },
+        { "com.google.android.apps.translate", ("Google Translate", "Utility", "🔤", "#4285F4") },
+        { "com.microsoft.office.officehubrow", ("Microsoft 365", "Office", "📊", "#D83B01") },
+        { "com.microsoft.office.outlook", ("Microsoft Outlook", "Mail", "📨", "#0078D4") },
+        { "com.alibaba.intl.android.apps.poseidon", ("Alibaba.com", "Wholesale", "📦", "#FF6A00") },
+        { "com.dji.mimo", ("DJI Mimo", "Camera / Drone", "🚁", "#000000") },
+        { "com.activ.health", ("Activ Health", "Health & Fitness", "❤️", "#E60000") },
+        { "com.brother.mfc.connect", ("Brother Mobile Connect", "Printer", "🖨️", "#003399") },
+        { "com.airtel.airtelapp", ("Airtel Thanks", "Telecom", "📡", "#E40000") },
+        { "com.sec.android.app.camera", ("Samsung Camera", "Camera", "📷", "#000000") },
+        { "com.sec.android.gallery3d", ("Samsung Gallery", "Photos", "🎨", "#E4405F") },
+        { "com.sec.android.app.sbrowser", ("Samsung Internet", "Browser", "🧭", "#6B38FB") },
+        { "com.android.settings", ("System Settings", "Settings", "⚙️", "#8E8E93") },
+    };
+
+    public async Task<List<AppItem>> GetInstalledAppsAsync(string serial)
+    {
+        var appList = new List<AppItem>();
+        var seenPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            Log($"Scanning installed apps on device {serial}...", LogLevel.Command);
+
+            // 1. Get user installed (3rd-party) packages
+            var thirdPartySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var (c1, thirdPartyOutput, _) = await RunAdbCommandAsync($"-s {serial} shell pm list packages -3", 10000);
+            if (c1 == 0 && !string.IsNullOrWhiteSpace(thirdPartyOutput))
+            {
+                foreach (var line in thirdPartyOutput.Split('\n'))
+                {
+                    string pkg = line.Trim();
+                    if (pkg.StartsWith("package:")) pkg = pkg.Substring("package:".Length).Trim();
+                    if (!string.IsNullOrEmpty(pkg)) thirdPartySet.Add(pkg);
+                }
+            }
+
+            // 2. Query launchable activities (user-facing apps)
+            var (c2, launchableOutput, _) = await RunAdbCommandAsync($"-s {serial} shell cmd package query-intent-activities -a android.intent.action.MAIN -c android.intent.category.LAUNCHER", 15000);
+            if (c2 == 0 && !string.IsNullOrWhiteSpace(launchableOutput))
+            {
+                foreach (var line in launchableOutput.Split('\n'))
+                {
+                    string trimmed = line.Trim();
+                    // Example format: "activity com.whatsapp/.Main" or "packageName=com.whatsapp"
+                    string pkg = "";
+                    if (trimmed.StartsWith("activity ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var parts = trimmed.Substring("activity ".Length).Split('/');
+                        if (parts.Length > 0) pkg = parts[0].Trim();
+                    }
+                    else if (trimmed.Contains("packageName="))
+                    {
+                        int idx = trimmed.IndexOf("packageName=");
+                        int end = trimmed.IndexOfAny(new[] { ' ', ',', ';' }, idx);
+                        pkg = end > idx ? trimmed.Substring(idx + 12, end - idx - 12) : trimmed.Substring(idx + 12);
+                    }
+
+                    if (!string.IsNullOrEmpty(pkg) && !seenPackages.Contains(pkg))
+                    {
+                        seenPackages.Add(pkg);
+                        bool isThirdParty = thirdPartySet.Contains(pkg);
+                        appList.Add(CreateAppItem(pkg, !isThirdParty));
+                    }
+                }
+            }
+
+            // 3. Add any remaining 3rd-party user packages that didn't have explicit launcher activities
+            foreach (var pkg in thirdPartySet)
+            {
+                if (!seenPackages.Contains(pkg))
+                {
+                    seenPackages.Add(pkg);
+                    appList.Add(CreateAppItem(pkg, false));
+                }
+            }
+
+            // Sort: User apps first, then alphabetically
+            appList = appList
+                .OrderBy(a => a.IsSystemApp)
+                .ThenBy(a => a.DisplayName)
+                .ToList();
+
+            Log($"Discovered {appList.Count} installed applications on {serial}", LogLevel.Success);
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to scan installed apps: {ex.Message}", LogLevel.Error);
+        }
+
+        return appList;
+    }
+
+    private AppItem CreateAppItem(string packageName, bool isSystem)
+    {
+        string name;
+        string cat = "App";
+        string icon = "📱";
+        string color = isSystem ? "#8E8E93" : "#0071E3";
+
+        if (KnownApps.TryGetValue(packageName, out var meta))
+        {
+            name = meta.Name;
+            cat = meta.Category;
+            icon = meta.Icon;
+            color = meta.Color;
+        }
+        else
+        {
+            name = HumanizePackageName(packageName);
+            // Categorize by keywords
+            if (packageName.Contains("camera", StringComparison.OrdinalIgnoreCase)) { cat = "Camera"; icon = "📷"; color = "#FF2D55"; }
+            else if (packageName.Contains("gallery", StringComparison.OrdinalIgnoreCase) || packageName.Contains("photo", StringComparison.OrdinalIgnoreCase)) { cat = "Media"; icon = "🖼️"; color = "#AF52DE"; }
+            else if (packageName.Contains("music", StringComparison.OrdinalIgnoreCase) || packageName.Contains("audio", StringComparison.OrdinalIgnoreCase)) { cat = "Audio"; icon = "🎵"; color = "#34C759"; }
+            else if (packageName.Contains("video", StringComparison.OrdinalIgnoreCase) || packageName.Contains("player", StringComparison.OrdinalIgnoreCase)) { cat = "Video"; icon = "🎬"; color = "#FF9500"; }
+            else if (packageName.Contains("browser", StringComparison.OrdinalIgnoreCase) || packageName.Contains("web", StringComparison.OrdinalIgnoreCase)) { cat = "Browser"; icon = "🌐"; color = "#0071E3"; }
+            else if (packageName.Contains("mail", StringComparison.OrdinalIgnoreCase) || packageName.Contains("email", StringComparison.OrdinalIgnoreCase)) { cat = "Mail"; icon = "✉️"; color = "#5856D6"; }
+            else if (packageName.Contains("chat", StringComparison.OrdinalIgnoreCase) || packageName.Contains("message", StringComparison.OrdinalIgnoreCase)) { cat = "Messaging"; icon = "💬"; color = "#30D158"; }
+            else if (packageName.Contains("shop", StringComparison.OrdinalIgnoreCase) || packageName.Contains("store", StringComparison.OrdinalIgnoreCase)) { cat = "Shopping"; icon = "🛒"; color = "#FF9500"; }
+            else if (packageName.Contains("game", StringComparison.OrdinalIgnoreCase)) { cat = "Gaming"; icon = "🎮"; color = "#FF3B30"; }
+            else if (packageName.Contains("health", StringComparison.OrdinalIgnoreCase) || packageName.Contains("fit", StringComparison.OrdinalIgnoreCase)) { cat = "Health"; icon = "❤️"; color = "#FF2D55"; }
+        }
+
+        return new AppItem
+        {
+            PackageName = packageName,
+            DisplayName = name,
+            Category = cat,
+            IsSystemApp = isSystem,
+            IconGlyph = icon,
+            IconColor = color
+        };
+    }
+
+    private static string HumanizePackageName(string packageName)
+    {
+        var parts = packageName.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return packageName;
+
+        // Take last or second-to-last meaningful part
+        string segment = parts[^1];
+        if (segment.Length <= 2 && parts.Length >= 2) segment = parts[^2];
+        if (segment.Equals("android", StringComparison.OrdinalIgnoreCase) && parts.Length >= 2) segment = parts[^2];
+
+        // Replace underscores, dashes with space and title case
+        segment = segment.Replace('_', ' ').Replace('-', ' ');
+        var words = segment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (words[i].Length > 0)
+            {
+                words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
+            }
+        }
+        return string.Join(" ", words);
+    }
+
+    public async Task<(bool Success, string Message)> UninstallAppAsync(string serial, string packageName)
+    {
+        Log($"Uninstalling package {packageName} from {serial}...", LogLevel.Command);
+        var (code, output, error) = await RunAdbCommandAsync($"-s {serial} uninstall {packageName}");
+        if (output.Contains("Success", StringComparison.OrdinalIgnoreCase))
+        {
+            Log($"Uninstalled {packageName} successfully!", LogLevel.Success);
+            return (true, "Uninstalled successfully");
+        }
+        string err = !string.IsNullOrEmpty(error) ? error : output;
+        Log($"Failed to uninstall {packageName}: {err}", LogLevel.Error);
+        return (false, err);
+    }
+
+    public async Task<(bool Success, string Message)> ClearAppDataAsync(string serial, string packageName)
+    {
+        Log($"Clearing data & cache for {packageName}...", LogLevel.Command);
+        var (code, output, error) = await RunAdbCommandAsync($"-s {serial} shell pm clear {packageName}");
+        if (output.Contains("Success", StringComparison.OrdinalIgnoreCase))
+        {
+            Log($"Cleared data for {packageName} successfully!", LogLevel.Success);
+            return (true, "App data cleared successfully");
+        }
+        string err = !string.IsNullOrEmpty(error) ? error : output;
+        Log($"Failed to clear data for {packageName}: {err}", LogLevel.Error);
+        return (false, err);
+    }
+
+    public async Task<(bool Success, string Message)> ForceStopAppAsync(string serial, string packageName)
+    {
+        Log($"Force-stopping {packageName}...", LogLevel.Command);
+        await RunAdbCommandAsync($"-s {serial} shell am force-stop {packageName}");
+        Log($"Force-stopped {packageName}", LogLevel.Info);
+        return (true, "App stopped");
+    }
+
+    public async Task<(bool Success, string Message)> LaunchAppOnPhoneAsync(string serial, string packageName)
+    {
+        Log($"Launching {packageName} on phone display...", LogLevel.Command);
+        var (code, output, error) = await RunAdbCommandAsync($"-s {serial} shell monkey -p {packageName} -c android.intent.category.LAUNCHER 1");
+        if (code == 0)
+        {
+            Log($"Opened {packageName} on phone screen", LogLevel.Success);
+            return (true, "Opened on phone screen");
+        }
+        string err = !string.IsNullOrEmpty(error) ? error : output;
+        return (false, err);
+    }
 }

@@ -403,5 +403,100 @@ public class MirrorService
         {
             StopMirroring(serial);
         }
+        lock (_ghostSessions)
+        {
+            foreach (var proc in _ghostSessions.ToList())
+            {
+                try { if (!proc.HasExited) proc.Kill(); } catch { }
+            }
+            _ghostSessions.Clear();
+        }
+    }
+
+    // ==============================================
+    // GHOST DISPLAY (DUAL INDEPENDENT VIRTUAL DISPLAY)
+    // ==============================================
+    private readonly List<Process> _ghostSessions = new();
+
+    public async Task<bool> LaunchAppInGhostDisplayAsync(DeviceItem device, string packageName, string displayName)
+    {
+        if (device == null || string.IsNullOrWhiteSpace(packageName)) return false;
+
+        string title = $"MIRRIVO // {displayName} (Dual Display)";
+        var argsList = new List<string>
+        {
+            $"-s {device.Serial}",
+            "--new-display=1080x1920/400",
+            "-x", // flex-display: auto-resize virtual display with window
+            $"--start-app=+{packageName}",
+            $"--window-title=\"{title}\"",
+            "--video-bit-rate=8M",
+            "--max-fps=60"
+        };
+
+        string fullArgs = string.Join(" ", argsList);
+        Log($"Launching Ghost Display for {displayName}: scrcpy {fullArgs}", LogLevel.Command);
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = _engine.ScrcpyPath,
+            Arguments = fullArgs,
+            WorkingDirectory = _engine.EngineDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        string currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+        if (!currentPath.Contains(_engine.EngineDirectory))
+        {
+            startInfo.EnvironmentVariables["PATH"] = $"{_engine.EngineDirectory};{currentPath}";
+        }
+
+        try
+        {
+            var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+            process.OutputDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    Log($"[GhostDisplay] {e.Data}", LogLevel.Info);
+                }
+            };
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    Log($"[GhostDisplay] {e.Data}", LogLevel.Info);
+                }
+            };
+            process.Exited += (s, e) =>
+            {
+                lock (_ghostSessions)
+                {
+                    _ghostSessions.Remove(process);
+                }
+                Log($"Ghost Display closed for {displayName}", LogLevel.Info);
+            };
+
+            if (process.Start())
+            {
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                lock (_ghostSessions)
+                {
+                    _ghostSessions.Add(process);
+                }
+                Log($"Ghost Display launched for '{displayName}'! Independent window opened on PC.", LogLevel.Success);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to launch Ghost Display: {ex.Message}", LogLevel.Error);
+        }
+
+        return false;
     }
 }
