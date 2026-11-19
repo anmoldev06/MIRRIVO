@@ -17,6 +17,7 @@ public class MirrorService
     private readonly ConcurrentDictionary<string, Process> _activeSessions = new();
 
     public event Action<string, bool>? OnMirrorStateChanged;
+    public event Action<string, bool>? OnPhoneLockStateChanged;
     public event Action<string, double>? OnFpsUpdated;
     public event Action<LogEntry>? OnLog;
 
@@ -422,6 +423,18 @@ public class MirrorService
     {
         if (device == null || string.IsNullOrWhiteSpace(packageName)) return false;
 
+        // Auto-wake device CPU/display from sleep/dozing and dismiss swipe lockscreen
+        bool isLocked = await AdbService.Instance.WakeAndUnlockDeviceAsync(device.Serial);
+        if (isLocked)
+        {
+            Log($"[GhostDisplay] ⚠️ Phone '{device.Model}' is locked (PIN/Fingerprint). Tap fingerprint or enter PIN on phone to enable clicks & typing.", LogLevel.Warning);
+            OnPhoneLockStateChanged?.Invoke(device.Serial, true);
+        }
+        else
+        {
+            OnPhoneLockStateChanged?.Invoke(device.Serial, false);
+        }
+
         string title = $"MIRRIVO // {displayName} (Dual Display)";
         var argsList = new List<string>
         {
@@ -429,6 +442,8 @@ public class MirrorService
             "--new-display=1080x2160/400",
             "--no-vd-system-decorations",
             "--display-ime-policy=hide",
+            "--no-mouse-hover",
+            "--legacy-paste",
             $"--start-app={packageName}",
             $"--window-title=\"{title}\"",
             "--video-bit-rate=8M",
@@ -492,18 +507,26 @@ public class MirrorService
                 }
                 Log($"Ghost Display launched for '{displayName}'! Independent window opened on PC.", LogLevel.Success);
 
-                _ = Task.Run(async () =>
+                // If device was locked when launching, monitor in background until user unlocks via fingerprint/PIN
+                if (isLocked)
                 {
-                    await Task.Delay(1000);
-                    if (!string.IsNullOrWhiteSpace(mainActivity))
+                    _ = Task.Run(async () =>
                     {
-                        await AdbService.Instance.RunAdbCommandAsync($"-s {device.Serial} shell am start -n {mainActivity}");
-                    }
-                    else
-                    {
-                        await AdbService.Instance.RunAdbCommandAsync($"-s {device.Serial} shell monkey -p {packageName} -c android.intent.category.LAUNCHER 1");
-                    }
-                });
+                        for (int i = 0; i < 20; i++)
+                        {
+                            await Task.Delay(1500);
+                            if (process.HasExited) break;
+
+                            bool stillLocked = await AdbService.Instance.IsDeviceLockedAsync(device.Serial);
+                            if (!stillLocked)
+                            {
+                                Log($"[GhostDisplay] Phone unlocked! Full touch, keyboard, and clipboard control active on PC.", LogLevel.Success);
+                                OnPhoneLockStateChanged?.Invoke(device.Serial, false);
+                                break;
+                            }
+                        }
+                    });
+                }
 
                 return true;
             }

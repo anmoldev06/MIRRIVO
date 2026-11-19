@@ -363,12 +363,54 @@ public class AdbService
         await RunAdbCommandAsync($"-s {serial} shell input keyevent {keycode}");
     }
 
+    /// <summary>
+    /// Wakes up the device CPU/display from sleep/dozing and attempts to dismiss keyguard.
+    /// Returns true if device is still locked with secure PIN/pattern/fingerprint, false if fully unlocked.
+    /// </summary>
+    public async Task<bool> WakeAndUnlockDeviceAsync(string serial)
+    {
+        try
+        {
+            // 1. Send KEYCODE_WAKEUP to wake screen & CPU from sleep/dozing
+            // 2. Dismiss insecure/swipe lockscreen
+            // 3. Send KEYCODE_MENU (82) to dismiss non-secure lock prompt
+            await RunAdbCommandAsync($"-s {serial} shell \"input keyevent KEYCODE_WAKEUP && wm dismiss-keyguard && input keyevent 82\"", 3000);
+
+            // Small delay for WindowManager to update policy
+            await Task.Delay(200);
+
+            return await IsDeviceLockedAsync(serial);
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to wake/unlock device {serial}: {ex.Message}", LogLevel.Warning);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks whether the device is currently showing an active keyguard / lock screen.
+    /// </summary>
+    public async Task<bool> IsDeviceLockedAsync(string serial)
+    {
+        try
+        {
+            var (_, output, _) = await RunAdbCommandAsync($"-s {serial} shell \"dumpsys window policy | grep showing=\"", 2000);
+            if (!string.IsNullOrWhiteSpace(output) && output.Contains("showing=true"))
+            {
+                return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
     public async Task<(bool Success, string Text)> GetDeviceClipboardAsync(string serial)
     {
         try
         {
             var (code, outStr, _) = await RunAdbCommandAsync($"-s {serial} shell cmd clipboard get", 3000);
-            if (code == 0 && !string.IsNullOrWhiteSpace(outStr))
+            if (code == 0 && !string.IsNullOrWhiteSpace(outStr) && !outStr.Contains("No shell command"))
             {
                 return (true, outStr.Trim());
             }
@@ -382,11 +424,16 @@ public class AdbService
         if (string.IsNullOrEmpty(text)) return false;
         try
         {
-            string safeText = text.Replace("\"", "\\\"").Replace("$", "\\$");
-            var (code, _, _) = await RunAdbCommandAsync($"-s {serial} shell \"cmd clipboard set \\\"{safeText}\\\"\"", 3000);
-            if (code == 0) return true;
+            // Ensure device is awake to accept clipboard / input
+            await WakeAndUnlockDeviceAsync(serial);
 
-            await RunAdbCommandAsync($"-s {serial} shell input text \"{safeText}\"", 2000);
+            string safeText = text.Replace("\"", "\\\"").Replace("$", "\\$");
+            var (code, outStr, _) = await RunAdbCommandAsync($"-s {serial} shell \"cmd clipboard set \\\"{safeText}\\\"\"", 3000);
+            if (code == 0 && !outStr.Contains("No shell command")) return true;
+
+            // Direct input text fallback
+            string escapedInput = safeText.Replace(" ", "%s");
+            await RunAdbCommandAsync($"-s {serial} shell input text \"{escapedInput}\"", 2000);
             return true;
         }
         catch (Exception ex)

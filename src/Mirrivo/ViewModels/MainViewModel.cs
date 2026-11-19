@@ -91,6 +91,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _stayAwake = true;
 
+    [ObservableProperty]
+    private bool _isPhoneLocked = false;
+
     partial void OnStayAwakeChanged(bool value)
     {
         Config.StayAwake = value;
@@ -282,7 +285,14 @@ public partial class MainViewModel : ObservableObject
         bool ok = await _mirror.LaunchAppInGhostDisplayAsync(SelectedDevice, app.PackageName, app.DisplayName, app.MainActivity);
         if (ok)
         {
-            StatusText = $"Dual Display active: {app.DisplayName}";
+            if (IsPhoneLocked)
+            {
+                StatusText = $"Dual Display opened: {app.DisplayName} (⚠️ Unlock phone to interact)";
+            }
+            else
+            {
+                StatusText = $"Dual Display active: {app.DisplayName}";
+            }
         }
         else
         {
@@ -521,6 +531,24 @@ public partial class MainViewModel : ObservableObject
         _mirror.OnLog += HandleLog;
         _mirror.OnMirrorStateChanged += HandleMirrorStateChanged;
         _mirror.OnFpsUpdated += HandleFpsUpdated;
+        _mirror.OnPhoneLockStateChanged += (serial, isLocked) =>
+        {
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                if (SelectedDevice?.Serial == serial)
+                {
+                    IsPhoneLocked = isLocked;
+                    if (isLocked)
+                    {
+                        StatusText = "Phone is locked (PIN/Fingerprint). Unlock phone to interact.";
+                    }
+                    else
+                    {
+                        StatusText = "Phone unlocked! Dual Display PC input active.";
+                    }
+                }
+            });
+        };
         _storage.OnMountStateChanged += (mounted) =>
         {
             Application.Current?.Dispatcher?.Invoke(() =>
@@ -1258,6 +1286,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task WakeAndUnlockPhoneAsync()
+    {
+        if (SelectedDevice == null) return;
+        StatusText = "Waking and unlocking phone...";
+        bool stillLocked = await _adb.WakeAndUnlockDeviceAsync(SelectedDevice.Serial);
+        IsPhoneLocked = stillLocked;
+        if (stillLocked)
+        {
+            StatusText = "Phone is locked (PIN/Fingerprint). Unlock on phone to enable clicks & paste.";
+            Log("[Device] Phone screen awakened. Please enter PIN or use Fingerprint on phone to unlock.", LogLevel.Warning);
+        }
+        else
+        {
+            StatusText = "Phone unlocked! Full PC control active.";
+            Log("[Device] Phone unlocked! Full touch, keyboard, and clipboard control enabled.", LogLevel.Success);
+        }
+    }
+
+    [RelayCommand]
     public async Task SyncClipboardAsync()
     {
         if (SelectedDevice == null)
@@ -1268,6 +1315,15 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            // Auto-wake device and dismiss swipe lock
+            bool isLocked = await _adb.WakeAndUnlockDeviceAsync(SelectedDevice.Serial);
+            IsPhoneLocked = isLocked;
+            if (isLocked)
+            {
+                Log("[Clipboard] ⚠️ Phone is locked with PIN/Fingerprint. Unlock phone once to allow clipboard sync.", LogLevel.Warning);
+                StatusText = "Phone is locked! Tap fingerprint on phone to sync clipboard.";
+            }
+
             string pcText = Clipboard.ContainsText() ? Clipboard.GetText() : "";
             if (!string.IsNullOrEmpty(pcText))
             {
