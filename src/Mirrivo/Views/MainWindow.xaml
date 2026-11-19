@@ -507,11 +507,24 @@
 
                             <!-- 4 Essential Action Capsules (Single Clean Icon Per Button!) -->
                             <UniformGrid Columns="4" Rows="1">
-                                <!-- 1. Phone Storage Drive -->
+                                <!-- 1. When USB Cable Connected: Switch to Wi-Fi Mode -->
+                                <Button Style="{StaticResource AppleQuickCardButton}"
+                                        Command="{Binding SwitchModeCommand}"
+                                        ToolTip="Convert USB connection to Wireless Wi-Fi. You can unplug the cable immediately after!"
+                                        Height="42" Margin="0,0,6,0"
+                                        Visibility="{Binding SelectedDevice.IsWireless, Converter={StaticResource InverseBoolToVis}}">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="📡" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="Switch to Wi-Fi" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- 1. When Wireless Wi-Fi Connected: Mount Phone Storage Drive -->
                                 <Button Style="{StaticResource AppleQuickCardButton}"
                                         Command="{Binding TogglePhoneStorageCommand}"
                                         ToolTip="Mount phone storage as a Windows drive in File Explorer"
-                                        Height="42" Margin="0,0,6,0">
+                                        Height="42" Margin="0,0,6,0"
+                                        Visibility="{Binding SelectedDevice.IsWireless, Converter={StaticResource BoolToVis}}">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                         <TextBlock Text="📁" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding PhoneStorageButtonText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -1575,10 +1588,11 @@
                             </StackPanel>
                             <Button Grid.Column="1"
                                     Content="🔌 Disconnect Wi-Fi"
-                                    Style="{StaticResource AppleActionPill}"
+                                    Style="{StaticResource AppleCompactActionPill}"
                                     Background="#FF3B30"
-                                    Height="36"
-                                    Padding="18,0"
+                                    VerticalAlignment="Center"
+                                    Height="32"
+                                    Padding="16,0"
                                     FontSize="12"
                                     Command="{Binding DisconnectWirelessCommand}"
                                     CommandParameter="{Binding ConnectedWirelessDevice.Serial}" />
@@ -1600,17 +1614,22 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                                 <TextBlock Text="Have a phone connected via USB right now?" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource BrushInk}" />
-                                <TextBlock Text="Convert it to wireless with 1 click. You can unplug the cable immediately after!" FontSize="11" Foreground="{StaticResource BrushMute}" />
+                                <TextBlock Text="Convert it to wireless with 1 click. You can unplug the cable immediately after!" FontSize="11" Foreground="{StaticResource BrushMute}" Margin="0,2,0,0" />
                             </StackPanel>
                             <Button Grid.Column="1"
-                                    Content="📶 Convert to Wi-Fi"
-                                    Style="{StaticResource AppleActionPill}"
-                                    Height="36"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource AppleCompactActionPill}"
+                                    Height="32"
                                     Padding="16,0"
                                     FontSize="12"
-                                    Command="{Binding SwitchModeCommand}" />
+                                    Command="{Binding SwitchModeCommand}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="📡" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Convert to Wi-Fi" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
 

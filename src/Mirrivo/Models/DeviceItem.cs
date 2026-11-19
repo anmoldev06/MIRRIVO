@@ -14,6 +14,10 @@ public enum DeviceConnectionStatus
 public partial class DeviceItem : ObservableObject
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWireless))]
+    [NotifyPropertyChangedFor(nameof(ConnectionTypeDisplay))]
+    [NotifyPropertyChangedFor(nameof(SwitchModeText))]
+    [NotifyPropertyChangedFor(nameof(DisconnectOrReconnectText))]
     private string _serial = string.Empty;
 
     [ObservableProperty]
