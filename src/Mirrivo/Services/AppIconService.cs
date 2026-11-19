@@ -42,9 +42,24 @@ public class AppIconService
         try
         {
             string file = Path.Combine(_cacheDirectory, $"{packageName}.png");
-            if (File.Exists(file) && new FileInfo(file).Length > 200)
+            if (File.Exists(file))
             {
-                return file;
+                var fi = new FileInfo(file);
+                // Valid icon must be between 300 bytes and 2 MB
+                if (fi.Length > 300 && fi.Length < 2 * 1024 * 1024)
+                {
+                    // Check magic bytes for valid PNG (0x89, 0x50, 0x4E, 0x47)
+                    using var stream = File.OpenRead(file);
+                    byte[] header = new byte[4];
+                    int read = stream.Read(header, 0, 4);
+                    if (read == 4 && header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47)
+                    {
+                        return file;
+                    }
+                }
+
+                // If corrupted or non-PNG APK dump, delete it
+                try { File.Delete(file); } catch { }
             }
         }
         catch { }
@@ -60,16 +75,17 @@ public class AppIconService
         {
             try
             {
-                // 1. Try local APK extraction via ADB if device serial is provided
+                // 1. Try online Play Store official icon fetch FIRST
+                // Play Store provides verified, crisp 128px PNG icons with correct branding
+                string? webIcon = await TryFetchPlayStoreIconAsync(pkg);
+                if (webIcon != null) return webIcon;
+
+                // 2. Fallback to local APK extraction via ADB if device serial is provided
                 if (!string.IsNullOrEmpty(serial))
                 {
                     string? adbIcon = await TryExtractIconFromDeviceAsync(serial, pkg, apkPath);
                     if (adbIcon != null) return adbIcon;
                 }
-
-                // 2. Try online Play Store official icon fetch
-                string? webIcon = await TryFetchPlayStoreIconAsync(pkg);
-                if (webIcon != null) return webIcon;
             }
             catch { }
             finally
@@ -110,18 +126,42 @@ public class AppIconService
             string targetCacheFile = Path.Combine(_cacheDirectory, $"{packageName}.png");
             string remoteTmpFile = $"/data/local/tmp/mirrivo_icons/{packageName}.png";
 
-            // Extract best resolution PNG using toybox unzip
-            string script = $"mkdir -p /data/local/tmp/mirrivo_icons && " +
-                            $"icon_file=$(unzip -l '{path}' 'res/*ic_launcher*.png' 'res/*icon*.png' 2>/dev/null | grep -E '\\.png$' | sort -k1 -nr | head -n 1 | awk '{{print $4}}') && " +
+            // Extract best resolution PNG using toybox unzip safely
+            // Use recursive wildcards (*ic_launcher*.png, *launcher*.png, *icon*.png)
+            // AND ensure $icon_file is strictly non-empty before unzipping
+            string script = $"rm -f '{remoteTmpFile}' && mkdir -p /data/local/tmp/mirrivo_icons && " +
+                            $"icon_file=$(unzip -l '{path}' '*ic_launcher*.png' '*ic_launcher_round*.png' '*launcher*.png' 'res/*icon*.png' 2>/dev/null | grep -E '\\.png$' | sort -k1 -nr | head -n 1 | awk '{{print $4}}') && " +
                             $"if [ -n \"$icon_file\" ]; then unzip -p '{path}' \"$icon_file\" > '{remoteTmpFile}'; fi";
 
             await adb.RunAdbCommandAsync($"-s {serial} shell \"{script}\"", 5000);
 
-            // Pull the extracted icon to local cache
-            var (pullCode, _, _) = await adb.RunAdbCommandAsync($"-s {serial} pull \"{remoteTmpFile}\" \"{targetCacheFile}\"", 4000);
-            if (pullCode == 0 && File.Exists(targetCacheFile) && new FileInfo(targetCacheFile).Length > 300)
+            // Check if remote file exists and is a sane size (between 300 bytes and 2 MB)
+            var (statCode, statOut, _) = await adb.RunAdbCommandAsync($"-s {serial} shell \"stat -c %s '{remoteTmpFile}' 2>/dev/null\"", 2000);
+            if (long.TryParse(statOut?.Trim(), out long remoteSize) && remoteSize > 300 && remoteSize < 2 * 1024 * 1024)
             {
-                return targetCacheFile;
+                var (pullCode, _, _) = await adb.RunAdbCommandAsync($"-s {serial} pull \"{remoteTmpFile}\" \"{targetCacheFile}\"", 4000);
+                _ = adb.RunAdbCommandAsync($"-s {serial} shell \"rm -f '{remoteTmpFile}'\"", 2000);
+
+                if (pullCode == 0 && File.Exists(targetCacheFile))
+                {
+                    var fi = new FileInfo(targetCacheFile);
+                    if (fi.Length > 300 && fi.Length < 2 * 1024 * 1024)
+                    {
+                        using var stream = File.OpenRead(targetCacheFile);
+                        byte[] header = new byte[4];
+                        int read = stream.Read(header, 0, 4);
+                        if (read == 4 && header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47)
+                        {
+                            return targetCacheFile;
+                        }
+                    }
+                    try { File.Delete(targetCacheFile); } catch { }
+                }
+            }
+            else
+            {
+                // Clean up remote file if size check failed
+                _ = adb.RunAdbCommandAsync($"-s {serial} shell \"rm -f '{remoteTmpFile}'\"", 2000);
             }
         }
         catch { }
@@ -138,8 +178,16 @@ public class AppIconService
             string html = await _http.GetStringAsync(url);
             if (string.IsNullOrWhiteSpace(html)) return null;
 
-            // OpenGraph Image meta tag
+            // 1. Try og:image meta tag
             var match = Regex.Match(html, @"<meta\s+property=""og:image""\s+content=""([^""]+)""", RegexOptions.IgnoreCase);
+            
+            // 2. Try modern Play Store Icon image tag
+            if (!match.Success)
+            {
+                match = Regex.Match(html, @"<img[^>]+alt=""Icon image""[^>]+src=""([^""]+)""", RegexOptions.IgnoreCase);
+            }
+
+            // 3. Try generic itemprop="image"
             if (!match.Success)
             {
                 match = Regex.Match(html, @"itemprop=""image""\s+content=""([^""]+)""", RegexOptions.IgnoreCase);
@@ -163,7 +211,7 @@ public class AppIconService
                 }
 
                 byte[] imageBytes = await _http.GetByteArrayAsync(iconUrl);
-                if (imageBytes.Length > 200)
+                if (imageBytes.Length > 200 && imageBytes.Length < 2 * 1024 * 1024)
                 {
                     await File.WriteAllBytesAsync(targetCacheFile, imageBytes);
                     return targetCacheFile;

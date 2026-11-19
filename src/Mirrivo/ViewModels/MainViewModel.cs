@@ -219,11 +219,11 @@ public partial class MainViewModel : ObservableObject
                 StatusText = $"{TotalAppsCount} apps loaded ({UserAppsCount} user apps)";
             });
 
-            // Stream real app icons and verified names in the background
+            // Stream real app icons and verified names concurrently in the background (6x speed)
             _ = Task.Run(async () =>
             {
                 string devSerial = SelectedDevice?.Serial ?? "";
-                foreach (var app in apps)
+                await Parallel.ForEachAsync(apps, new ParallelOptions { MaxDegreeOfParallelism = 6 }, async (app, ct) =>
                 {
                     try
                     {
@@ -253,7 +253,7 @@ public partial class MainViewModel : ObservableObject
                         }
                     }
                     catch { }
-                }
+                });
             });
         }
         catch (Exception ex)

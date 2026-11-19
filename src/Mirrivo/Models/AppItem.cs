@@ -37,7 +37,14 @@ public partial class AppItem : ObservableObject
 
     partial void OnIconPathChanged(string? value)
     {
-        HasCustomIcon = !string.IsNullOrEmpty(value) && File.Exists(value);
+        try
+        {
+            HasCustomIcon = !string.IsNullOrEmpty(value) && File.Exists(value) && new FileInfo(value).Length > 300;
+        }
+        catch
+        {
+            HasCustomIcon = false;
+        }
     }
 
     public string Initials
