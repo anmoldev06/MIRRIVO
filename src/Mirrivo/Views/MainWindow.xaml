@@ -1050,7 +1050,8 @@
                                                               Command="{Binding PlacementTarget.Tag.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                               CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                                         <MenuItem.Icon>
-                                                            <TextBlock Text="🖥️" FontSize="13" />
+                                                            <Path Data="M 2,3 L 14,3 C 14.5,3 15,3.5 15,4 L 15,11 C 15,11.5 14.5,12 14,12 L 10,12 L 10.5,14 L 12,14 C 12.3,14 12.5,14.2 12.5,14.5 C 12.5,14.8 12.3,15 12,15 L 4,15 C 3.7,15 3.5,14.8 3.5,14.5 C 3.5,14.2 3.7,14 4,14 L 5.5,14 L 6,12 L 2,12 C 1.5,12 1,11.5 1,11 L 1,4 C 1,3.5 1.5,3 2,3 Z M 2.5,4.5 L 2.5,10.5 L 13.5,10.5 L 13.5,4.5 Z"
+                                                                  Fill="{StaticResource BrushInk}" Width="12" Height="11" Stretch="Uniform" />
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                     <MenuItem Style="{StaticResource AppleMenuItem}"
@@ -1058,7 +1059,8 @@
                                                               Command="{Binding PlacementTarget.Tag.OpenOnPhoneCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                               CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                                         <MenuItem.Icon>
-                                                            <TextBlock Text="📱" FontSize="13" />
+                                                            <Path Data="M 3,1 C 2.4,1 2,1.4 2,2 L 2,14 C 2,14.6 2.4,15 3,15 L 9,15 C 9.6,15 10,14.6 10,14 L 10,2 C 10,1.4 9.6,1 9,1 Z M 3.5,2.5 L 8.5,2.5 L 8.5,12.5 L 3.5,12.5 Z M 5.2,13.7 C 5.2,13.4 5.5,13.2 5.8,13.2 L 6.2,13.2 C 6.5,13.2 6.8,13.4 6.8,13.7 C 6.8,14 6.5,14.2 6.2,14.2 L 5.8,14.2 C 5.5,14.2 5.2,14 5.2,13.7 Z"
+                                                                  Fill="{StaticResource BrushInk}" Width="9" Height="12" Stretch="Uniform" />
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                     <Separator Style="{StaticResource AppleMenuSeparator}" />
@@ -1185,47 +1187,57 @@
                                                                Foreground="{StaticResource BrushMute}" />
                                                 </Border>
 
-                                                <!-- Row 3: Action Buttons (🖥️ PC Dual Display & 📱 Phone Screen) -->
-                                                <Grid Grid.Row="3" VerticalAlignment="Bottom" Margin="0,6,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
+                                                <!-- Row 3: Action Buttons (Unified Apple Segmented Capsule) -->
+                                                <Border Grid.Row="3"
+                                                        VerticalAlignment="Bottom"
+                                                        Margin="0,8,0,0"
+                                                        Background="#F2F2F7"
+                                                        BorderBrush="{StaticResource BrushHairline}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="13"
+                                                        Height="27"
+                                                        ClipToBounds="True">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="1" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
 
-                                                    <!-- Primary: Dual Display on PC -->
-                                                    <Button Grid.Column="0"
-                                                            Style="{StaticResource AppleActionPill}"
-                                                            ToolTip="Launch in independent Dual Display on PC (Zero Phone Disturbance)"
-                                                            Command="{Binding DataContext.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                            CommandParameter="{Binding}"
-                                                            Height="27"
-                                                            Padding="0"
-                                                            Margin="0,0,3,0">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="🖥️" FontSize="10" Margin="0,0,3,0" VerticalAlignment="Center" />
-                                                            <TextBlock Text="PC" FontSize="10.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                    </Button>
+                                                        <!-- Primary: PC Dual Display -->
+                                                        <Button Grid.Column="0"
+                                                                Style="{StaticResource AppleSegmentButton}"
+                                                                Background="#0071E3"
+                                                                Foreground="#FFFFFF"
+                                                                ToolTip="Launch in independent Dual Display on PC (Zero Phone Disturbance)"
+                                                                Command="{Binding DataContext.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <Path Data="M 2,3 L 14,3 C 14.5,3 15,3.5 15,4 L 15,11 C 15,11.5 14.5,12 14,12 L 10,12 L 10.5,14 L 12,14 C 12.3,14 12.5,14.2 12.5,14.5 C 12.5,14.8 12.3,15 12,15 L 4,15 C 3.7,15 3.5,14.8 3.5,14.5 C 3.5,14.2 3.7,14 4,14 L 5.5,14 L 6,12 L 2,12 C 1.5,12 1,11.5 1,11 L 1,4 C 1,3.5 1.5,3 2,3 Z M 2.5,4.5 L 2.5,10.5 L 13.5,10.5 L 13.5,4.5 Z"
+                                                                      Fill="#FFFFFF" Width="10" Height="9" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                <TextBlock Text="PC" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
 
-                                                    <!-- Secondary: Launch on Phone -->
-                                                    <Button Grid.Column="1"
-                                                            Style="{StaticResource AppleSegmentTab}"
-                                                            ToolTip="Launch directly on phone screen"
-                                                            Command="{Binding DataContext.OpenOnPhoneCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                            CommandParameter="{Binding}"
-                                                            Background="#F2F2F7"
-                                                            Foreground="#1C1C1E"
-                                                            BorderBrush="{StaticResource BrushHairline}"
-                                                            BorderThickness="1"
-                                                            Height="27"
-                                                            Padding="0"
-                                                            Margin="3,0,0,0">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="📱" FontSize="10" Margin="0,0,3,0" VerticalAlignment="Center" />
-                                                            <TextBlock Text="Phone" FontSize="10.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                    </Button>
-                                                </Grid>
+                                                        <!-- Subtle Divider -->
+                                                        <Rectangle Grid.Column="1" Fill="#00000018" />
+
+                                                        <!-- Secondary: Phone Screen -->
+                                                        <Button Grid.Column="2"
+                                                                Style="{StaticResource AppleSegmentButton}"
+                                                                Background="#F2F2F7"
+                                                                Foreground="#1C1C1E"
+                                                                ToolTip="Launch directly on phone screen"
+                                                                Command="{Binding DataContext.OpenOnPhoneCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <Path Data="M 3,1 C 2.4,1 2,1.4 2,2 L 2,14 C 2,14.6 2.4,15 3,15 L 9,15 C 9.6,15 10,14.6 10,14 L 10,2 C 10,1.4 9.6,1 9,1 Z M 3.5,2.5 L 8.5,2.5 L 8.5,12.5 L 3.5,12.5 Z M 5.2,13.7 C 5.2,13.4 5.5,13.2 5.8,13.2 L 6.2,13.2 C 6.5,13.2 6.8,13.4 6.8,13.7 C 6.8,14 6.5,14.2 6.2,14.2 L 5.8,14.2 C 5.5,14.2 5.2,14 5.2,13.7 Z"
+                                                                      Fill="#1C1C1E" Width="8" Height="10" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                <TextBlock Text="Phone" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -1295,15 +1307,16 @@
 
                                                 <!-- Actions -->
                                                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Button Style="{StaticResource AppleActionPill}"
+                                                    <Button Style="{StaticResource AppleCompactActionPill}"
                                                             ToolTip="Launch in independent Dual Display on PC"
                                                             Command="{Binding DataContext.OpenGhostDisplayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}"
                                                             Height="28"
                                                             Padding="12,0"
                                                             Margin="0,0,6,0">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="🖥️" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Path Data="M 2,3 L 14,3 C 14.5,3 15,3.5 15,4 L 15,11 C 15,11.5 14.5,12 14,12 L 10,12 L 10.5,14 L 12,14 C 12.3,14 12.5,14.2 12.5,14.5 C 12.5,14.8 12.3,15 12,15 L 4,15 C 3.7,15 3.5,14.8 3.5,14.5 C 3.5,14.2 3.7,14 4,14 L 5.5,14 L 6,12 L 2,12 C 1.5,12 1,11.5 1,11 L 1,4 C 1,3.5 1.5,3 2,3 Z M 2.5,4.5 L 2.5,10.5 L 13.5,10.5 L 13.5,4.5 Z"
+                                                                  Fill="#FFFFFF" Width="11" Height="10" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                                             <TextBlock Text="PC Display" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                         </StackPanel>
                                                     </Button>
@@ -1317,8 +1330,9 @@
                                                             BorderThickness="1"
                                                             Height="28"
                                                             Padding="12,0">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="📱" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Path Data="M 3,1 C 2.4,1 2,1.4 2,2 L 2,14 C 2,14.6 2.4,15 3,15 L 9,15 C 9.6,15 10,14.6 10,14 L 10,2 C 10,1.4 9.6,1 9,1 Z M 3.5,2.5 L 8.5,2.5 L 8.5,12.5 L 3.5,12.5 Z M 5.2,13.7 C 5.2,13.4 5.5,13.2 5.8,13.2 L 6.2,13.2 C 6.5,13.2 6.8,13.4 6.8,13.7 C 6.8,14 6.5,14.2 6.2,14.2 L 5.8,14.2 C 5.5,14.2 5.2,14 5.2,13.7 Z"
+                                                                  Fill="#1C1C1E" Width="9" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                                             <TextBlock Text="Phone" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                         </StackPanel>
                                                     </Button>
