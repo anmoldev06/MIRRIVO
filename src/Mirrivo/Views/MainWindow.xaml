@@ -949,7 +949,7 @@
                                            TextWrapping="Wrap" />
                             </StackPanel>
                             <Button Grid.Column="2"
-                                    Style="{StaticResource AppleActionButton}"
+                                    Style="{StaticResource AppleCompactActionPill}"
                                     Command="{Binding WakeAndUnlockPhoneCommand}"
                                     Margin="12,0,0,0"
                                     VerticalAlignment="Center">
